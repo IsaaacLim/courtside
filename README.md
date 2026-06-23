@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Volleyball Payments
 
-## Getting Started
+A small, host-only web app for tracking volleyball session attendance and player
+payments. Players keep RSVPing in the Facebook group chat as usual; the host uses
+this app to record who played each week and tick off payments (Beem / PayID) the
+moment money lands — so the months-long manual reconciliation in Excel goes away.
 
-First, run the development server:
+**Phase 1 scope:** the host selects players manually when creating a session. (No
+AI / paste parsing yet — the data model is kept AI-ready so that can be added later
+without a migration.)
+
+## Stack
+
+- Next.js (App Router) + TypeScript + Tailwind CSS
+- SQLite via libSQL — local file for dev, [Turso](https://turso.tech) for production
+- Drizzle ORM
+- Single shared-password auth via a signed, HTTP-only cookie
+
+## Getting started (local)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run db:migrate         # creates local.db from the schema
+npm run dev                # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` already exists for dev. Log in with the value of `HOST_PASSWORD`
+(default `changeme`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables (`.env.local`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable               | Purpose                                                        |
+| ---------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`         | `file:./local.db` for dev; Turso `libsql://…` URL in prod      |
+| `DATABASE_AUTH_TOKEN`  | empty for the local file; Turso auth token in prod             |
+| `HOST_PASSWORD`        | the single login password for the host                         |
+| `AUTH_SECRET`          | long random string used to sign the session cookie             |
 
-## Learn More
+## Screens
 
-To learn more about Next.js, take a look at the following resources:
+- `/` — Overview: total outstanding / collected, who owes, recent sessions.
+- `/sessions/new` — Create a session: date, rate (defaults to the last session's
+  rate), and a searchable player checklist with inline "add new player".
+- `/payments` — Search a player → tap **Paid** on unpaid sessions; multi-select for
+  a lump-sum payment covering several weeks; **Undo** to reverse.
+- `/players` — Manage the roster: add, rename, deactivate, merge duplicates.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Data model
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `players` — roster (`aliases` reserved for future AI matching).
+- `sessions` — one game; `rate` in integer cents.
+- `attendances` — a player at a session; `amountDue` is **snapshotted** from the
+  session rate at creation, so editing a rate later never rewrites past balances.
 
-## Deploy on Vercel
+Money is stored as integer cents throughout.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy (Vercel + Turso)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Create a Turso database and grab its URL + auth token:
+   ```bash
+   turso db create volleyball
+   turso db show volleyball --url
+   turso db tokens create volleyball
+   ```
+2. Apply the schema to it:
+   ```bash
+   DATABASE_URL="libsql://…" DATABASE_AUTH_TOKEN="…" npm run db:migrate
+   ```
+3. Import the repo into Vercel and set the four env vars above (use a strong
+   `HOST_PASSWORD` and a long random `AUTH_SECRET`). Deploy.
+
+## Scripts
+
+- `npm run dev` / `build` / `start`
+- `npm run db:generate` — generate a new migration after editing `src/db/schema.ts`
+- `npm run db:migrate` — apply migrations
+- `npm run db:studio` — open Drizzle Studio
