@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Plus } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronRight, Plus } from "lucide-react";
 import { formatCents } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -101,13 +102,24 @@ export default function SessionsPage() {
     setLoading(true);
     const res = await fetch("/api/sessions");
     const data = await res.json();
-    setSessions(data.sessions ?? []);
+    const list: SessionSummary[] = data.sessions ?? [];
+    setSessions(list);
     setLoading(false);
+    return list;
   }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadSessions();
+    loadSessions().then((list) => {
+      // Deep link from the Payments view: /sessions?sessionId=<id>
+      const sid = Number(
+        new URLSearchParams(window.location.search).get("sessionId"),
+      );
+      if (Number.isInteger(sid)) {
+        const s = list.find((x) => x.id === sid);
+        if (s) openSession(s);
+      }
+    });
   }, []);
 
   async function openSession(s: SessionSummary) {
@@ -242,29 +254,58 @@ export default function SessionsPage() {
               </Empty>
             ) : (
               <ItemGroup>
-                {unpaid.map((r) => (
-                  <Item key={r.id} variant="outline">
-                    <Checkbox
-                      checked={checked.has(r.id)}
-                      onCheckedChange={() => toggleCheck(r.id)}
-                      className="size-5"
-                    />
-                    <ItemContent>
-                      <ItemTitle>{r.playerName}</ItemTitle>
-                      <ItemDescription>
-                        {formatCents(r.amountDue)}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <Button
-                        onClick={() => setPaid([r.id], true)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        Paid
-                      </Button>
-                    </ItemActions>
-                  </Item>
-                ))}
+                {unpaid.map((r) => {
+                  const sel = checked.has(r.id);
+                  return (
+                    <Item
+                      key={r.id}
+                      variant="outline"
+                      role="button"
+                      aria-pressed={sel}
+                      onClick={() => toggleCheck(r.id)}
+                      className={cn(
+                        "cursor-pointer select-none",
+                        sel && "border-primary ring-1 ring-primary/30",
+                      )}
+                    >
+                      <Checkbox
+                        checked={sel}
+                        className="size-5 pointer-events-none"
+                        tabIndex={-1}
+                        aria-hidden
+                      />
+                      <ItemContent>
+                        <ItemTitle>
+                          <Link
+                            href={`/payments?playerId=${r.playerId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                          >
+                            {r.playerName}
+                            <ArrowUpRight
+                              className="size-3.5 text-muted-foreground/50"
+                              aria-hidden
+                            />
+                          </Link>
+                        </ItemTitle>
+                        <ItemDescription>
+                          {formatCents(r.amountDue)}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaid([r.id], true);
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Paid
+                        </Button>
+                      </ItemActions>
+                    </Item>
+                  );
+                })}
               </ItemGroup>
             )}
           </section>
@@ -291,7 +332,16 @@ export default function SessionsPage() {
                   <Item key={r.id} variant="muted">
                     <ItemContent>
                       <ItemTitle className="text-muted-foreground">
-                        {r.playerName}
+                        <Link
+                          href={`/payments?playerId=${r.playerId}`}
+                          className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                        >
+                          {r.playerName}
+                          <ArrowUpRight
+                            className="size-3.5 text-muted-foreground/50"
+                            aria-hidden
+                          />
+                        </Link>
                       </ItemTitle>
                       <ItemDescription>
                         {formatCents(r.amountDue)}

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -52,7 +54,18 @@ export default function PaymentsPage() {
   useEffect(() => {
     fetch("/api/players")
       .then((r) => r.json())
-      .then((d) => setPlayers(d.players ?? []));
+      .then((d) => {
+        const list: Player[] = d.players ?? [];
+        setPlayers(list);
+        // Deep link from the Sessions view: /payments?playerId=<id>
+        const pid = Number(
+          new URLSearchParams(window.location.search).get("playerId"),
+        );
+        if (Number.isInteger(pid)) {
+          const p = list.find((x) => x.id === pid);
+          if (p) openPlayer(p);
+        }
+      });
   }, []);
 
   const filtered = useMemo(() => {
@@ -186,29 +199,58 @@ export default function PaymentsPage() {
               </Empty>
             ) : (
               <ItemGroup>
-                {unpaid.map((r) => (
-                  <Item key={r.id} variant="outline">
-                    <Checkbox
-                      checked={checked.has(r.id)}
-                      onCheckedChange={() => toggleCheck(r.id)}
-                      className="size-5"
-                    />
-                    <ItemContent>
-                      <ItemTitle>{fmtDate(r.date)}</ItemTitle>
-                      <ItemDescription>
-                        {formatCents(r.amountDue)}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <Button
-                        onClick={() => setPaid([r.id], true)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        Paid
-                      </Button>
-                    </ItemActions>
-                  </Item>
-                ))}
+                {unpaid.map((r) => {
+                  const sel = checked.has(r.id);
+                  return (
+                    <Item
+                      key={r.id}
+                      variant="outline"
+                      role="button"
+                      aria-pressed={sel}
+                      onClick={() => toggleCheck(r.id)}
+                      className={cn(
+                        "cursor-pointer select-none",
+                        sel && "border-primary ring-1 ring-primary/30",
+                      )}
+                    >
+                      <Checkbox
+                        checked={sel}
+                        className="size-5 pointer-events-none"
+                        tabIndex={-1}
+                        aria-hidden
+                      />
+                      <ItemContent>
+                        <ItemTitle>
+                          <Link
+                            href={`/sessions?sessionId=${r.sessionId}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                          >
+                            {fmtDate(r.date)}
+                            <ArrowUpRight
+                              className="size-3.5 text-muted-foreground/50"
+                              aria-hidden
+                            />
+                          </Link>
+                        </ItemTitle>
+                        <ItemDescription>
+                          {formatCents(r.amountDue)}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPaid([r.id], true);
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Paid
+                        </Button>
+                      </ItemActions>
+                    </Item>
+                  );
+                })}
               </ItemGroup>
             )}
           </section>
@@ -235,7 +277,16 @@ export default function PaymentsPage() {
                   <Item key={r.id} variant="muted">
                     <ItemContent>
                       <ItemTitle className="text-muted-foreground">
-                        {fmtDate(r.date)}
+                        <Link
+                          href={`/sessions?sessionId=${r.sessionId}`}
+                          className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                        >
+                          {fmtDate(r.date)}
+                          <ArrowUpRight
+                            className="size-3.5 text-muted-foreground/50"
+                            aria-hidden
+                          />
+                        </Link>
                       </ItemTitle>
                       <ItemDescription>
                         {formatCents(r.amountDue)}
