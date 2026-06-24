@@ -124,6 +124,7 @@ export default function NewSessionPage() {
             type="text"
             inputMode="decimal"
             value={rate}
+            defaultValue={10.00}
             onChange={(e) => setRate(e.target.value)}
             placeholder="10.00"
             className="w-full rounded-lg border border-neutral-300 px-3 py-2"

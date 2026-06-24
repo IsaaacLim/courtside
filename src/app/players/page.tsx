@@ -2,12 +2,51 @@
 
 import { useEffect, useState } from "react";
 import type { Player } from "@/db/schema";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [includeInactive, setIncludeInactive] = useState(false);
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Rename dialog state.
+  const [renameTarget, setRenameTarget] = useState<Player | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Merge dialog state.
+  const [mergeSource, setMergeSource] = useState<Player | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState("");
+  const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -20,6 +59,7 @@ export default function PlayersPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeInactive]);
@@ -37,14 +77,24 @@ export default function PlayersPage() {
     load();
   }
 
-  async function rename(p: Player) {
-    const name = prompt("Rename player", p.name);
-    if (!name || name.trim() === p.name) return;
-    await fetch(`/api/players/${p.id}`, {
+  function openRename(p: Player) {
+    setRenameTarget(p);
+    setRenameValue(p.name);
+  }
+
+  async function doRename() {
+    if (!renameTarget) return;
+    const name = renameValue.trim();
+    if (!name || name === renameTarget.name) {
+      setRenameTarget(null);
+      return;
+    }
+    await fetch(`/api/players/${renameTarget.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: name.trim() }),
+      body: JSON.stringify({ name }),
     });
+    setRenameTarget(null);
     load();
   }
 
@@ -57,31 +107,27 @@ export default function PlayersPage() {
     load();
   }
 
-  async function merge(p: Player) {
-    const others = players.filter((x) => x.id !== p.id);
-    const target = prompt(
-      `Merge "${p.name}" INTO which player? Enter exact name.\n\n` +
-        others.map((o) => `• ${o.name}`).join("\n"),
-    );
-    if (!target) return;
-    const match = others.find(
-      (o) => o.name.toLowerCase() === target.trim().toLowerCase(),
-    );
-    if (!match) {
-      alert("No player with that exact name.");
-      return;
-    }
-    if (
-      !confirm(
-        `Merge "${p.name}" into "${match.name}"? All of ${p.name}'s sessions move to ${match.name}, and ${p.name} is deleted.`,
-      )
-    )
-      return;
-    await fetch(`/api/players/${p.id}`, {
+  const mergeTarget =
+    players.find((p) => String(p.id) === mergeTargetId) ?? null;
+  const mergeOthers = mergeSource
+    ? players.filter((p) => p.id !== mergeSource.id)
+    : [];
+
+  function openMerge(p: Player) {
+    setMergeSource(p);
+    setMergeTargetId("");
+  }
+
+  async function doMerge() {
+    if (!mergeSource || !mergeTarget) return;
+    await fetch(`/api/players/${mergeSource.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mergeIntoId: match.id }),
+      body: JSON.stringify({ mergeIntoId: mergeTarget.id }),
     });
+    setMergeConfirmOpen(false);
+    setMergeSource(null);
+    setMergeTargetId("");
     load();
   }
 
@@ -90,68 +136,186 @@ export default function PlayersPage() {
       <h1 className="text-xl font-bold mb-4">Players</h1>
 
       <form onSubmit={addPlayer} className="flex gap-2 mb-4">
-        <input
+        <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Add a player"
-          className="flex-1 rounded-lg border border-neutral-300 px-3 py-2"
+          className="flex-1"
         />
-        <button
-          type="submit"
-          disabled={!newName.trim()}
-          className="rounded-lg bg-blue-600 text-white px-4 py-2 font-medium disabled:opacity-50"
-        >
+        <Button type="submit" disabled={!newName.trim()}>
           Add
-        </button>
+        </Button>
       </form>
 
-      <label className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
-        <input
-          type="checkbox"
+      <div className="flex items-center gap-2 mb-3">
+        <Checkbox
+          id="show-inactive"
           checked={includeInactive}
-          onChange={(e) => setIncludeInactive(e.target.checked)}
+          onCheckedChange={(c) => setIncludeInactive(c === true)}
         />
-        Show inactive
-      </label>
+        <Label htmlFor="show-inactive" className="text-muted-foreground">
+          Show inactive
+        </Label>
+      </div>
 
       {loading ? (
-        <p className="text-neutral-400">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : players.length === 0 ? (
-        <p className="text-neutral-400">No players yet.</p>
+        <p className="text-muted-foreground">No players yet.</p>
       ) : (
-        <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white">
+        <ul className="divide-y divide-border rounded-lg border bg-card">
           {players.map((p) => (
             <li
               key={p.id}
-              className="flex items-center justify-between px-3 py-3"
+              className="flex items-center justify-between gap-2 px-3 py-2"
             >
-              <span className={p.active ? "" : "text-neutral-400 line-through"}>
+              <span
+                className={cn(
+                  "truncate",
+                  !p.active && "text-muted-foreground line-through",
+                )}
+              >
                 {p.name}
               </span>
-              <div className="flex gap-3 text-sm">
-                <button
-                  onClick={() => rename(p)}
-                  className="text-blue-600"
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openRename(p)}
                 >
                   Rename
-                </button>
-                <button
-                  onClick={() => merge(p)}
-                  className="text-neutral-500"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                  onClick={() => openMerge(p)}
                 >
                   Merge
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
                   onClick={() => toggleActive(p)}
-                  className="text-neutral-500"
                 >
                   {p.active ? "Deactivate" : "Reactivate"}
-                </button>
+                </Button>
               </div>
             </li>
           ))}
         </ul>
       )}
+
+      {/* Rename dialog */}
+      <Dialog
+        open={renameTarget !== null}
+        onOpenChange={(o) => !o && setRenameTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename player</DialogTitle>
+            <DialogDescription>
+              Enter a new name for {renameTarget?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              doRename();
+            }}
+          >
+            <Input
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              autoFocus
+            />
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRenameTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!renameValue.trim()}>
+                Save
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge dialog */}
+      <Dialog
+        open={mergeSource !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setMergeSource(null);
+            setMergeTargetId("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Merge {mergeSource?.name}</DialogTitle>
+            <DialogDescription>
+              Choose the player to merge into. All of {mergeSource?.name}&rsquo;s
+              sessions move to them, and {mergeSource?.name} is deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={mergeTargetId} onValueChange={setMergeTargetId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Choose a player…" />
+            </SelectTrigger>
+            <SelectContent>
+              {mergeOthers.map((o) => (
+                <SelectItem key={o.id} value={String(o.id)}>
+                  {o.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setMergeSource(null);
+                setMergeTargetId("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!mergeTarget}
+              onClick={() => setMergeConfirmOpen(true)}
+            >
+              Merge…
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge confirmation */}
+      <AlertDialog open={mergeConfirmOpen} onOpenChange={setMergeConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Merge players?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Merge &ldquo;{mergeSource?.name}&rdquo; into &ldquo;
+              {mergeTarget?.name}&rdquo;? All of {mergeSource?.name}&rsquo;s
+              sessions move to {mergeTarget?.name}, and {mergeSource?.name} is
+              deleted. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={doMerge}>Merge</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

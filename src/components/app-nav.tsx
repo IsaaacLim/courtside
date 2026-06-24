@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
+import { Moon, Sun, Power } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/", label: "Overview" },
@@ -9,6 +13,25 @@ const TABS = [
   { href: "/payments", label: "Payments" },
   { href: "/players", label: "Players" },
 ];
+
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+
+  // Icons swap purely via the `.dark` class (set by next-themes before paint),
+  // so there's no hydration mismatch and no setState-in-effect needed.
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label="Toggle theme"
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+      className="text-muted-foreground"
+    >
+      <Sun className="hidden size-4 dark:block" />
+      <Moon className="size-4 dark:hidden" />
+    </Button>
+  );
+}
 
 export function AppNav() {
   const pathname = usePathname();
@@ -24,8 +47,8 @@ export function AppNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 border-t border-neutral-200 bg-white">
-      <div className="max-w-2xl mx-auto flex">
+    <nav className="fixed bottom-0 inset-x-0 border-t border-border bg-background/95 backdrop-blur">
+      <div className="max-w-2xl mx-auto flex items-center">
         {TABS.map((tab) => {
           const active =
             tab.href === "/"
@@ -35,21 +58,25 @@ export function AppNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex-1 text-center py-3 text-sm font-medium ${
-                active ? "text-blue-600" : "text-neutral-500"
-              }`}
+              className={cn(
+                "flex-1 text-center py-3 text-sm font-medium transition-colors",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
             >
               {tab.label}
             </Link>
           );
         })}
-        <button
+        <ThemeToggle />
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={logout}
-          className="px-4 py-3 text-sm font-medium text-neutral-400"
           aria-label="Log out"
+          className="text-muted-foreground"
         >
-          ⏻
-        </button>
+          <Power className="size-4" />
+        </Button>
       </div>
     </nav>
   );

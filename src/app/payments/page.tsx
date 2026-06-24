@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type AttendanceRow = {
   id: number;
@@ -93,22 +96,22 @@ export default function PaymentsPage() {
     return (
       <div>
         <h1 className="text-xl font-bold mb-4">Payments</h1>
-        <input
+        <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search a player"
-          className="w-full rounded-lg border border-neutral-300 px-3 py-2 mb-3"
+          className="mb-3"
           autoFocus
         />
-        <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white">
+        <ul className="divide-y divide-border rounded-lg border bg-card overflow-hidden">
           {filtered.length === 0 ? (
-            <li className="px-3 py-3 text-neutral-400">No players.</li>
+            <li className="px-3 py-3 text-muted-foreground">No players.</li>
           ) : (
             filtered.map((p) => (
               <li key={p.id}>
                 <button
                   onClick={() => openPlayer(p)}
-                  className="w-full text-left px-3 py-3"
+                  className="w-full text-left px-3 py-3 hover:bg-accent transition-colors"
                 >
                   {p.name}
                 </button>
@@ -122,18 +125,21 @@ export default function PaymentsPage() {
 
   return (
     <div>
-      <button
+      <Button
+        variant="link"
         onClick={() => setSelectedPlayer(null)}
-        className="text-blue-600 text-sm mb-3"
+        className="px-0 h-auto mb-3"
       >
         ← All players
-      </button>
+      </Button>
       <h1 className="text-xl font-bold">{selectedPlayer.name}</h1>
-      <p className="text-neutral-500 mb-4">
+      <p className="text-muted-foreground mb-4">
         Outstanding{" "}
         <span
           className={
-            outstanding > 0 ? "text-red-600 font-semibold" : "text-green-600"
+            outstanding > 0
+              ? "text-red-600 dark:text-red-400 font-semibold"
+              : "text-green-600 dark:text-green-400"
           }
         >
           {formatCents(outstanding)}
@@ -141,76 +147,76 @@ export default function PaymentsPage() {
       </p>
 
       {loadingRows ? (
-        <p className="text-neutral-400">Loading…</p>
+        <p className="text-muted-foreground">Loading…</p>
       ) : (
         <>
-          <h2 className="text-sm font-semibold text-neutral-500 mb-2">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-2">
             Unpaid ({unpaid.length})
           </h2>
           {unpaid.length === 0 ? (
-            <p className="text-neutral-400 mb-6">All settled. 🎉</p>
+            <p className="text-muted-foreground mb-6">All settled. 🎉</p>
           ) : (
-            <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white mb-3">
+            <ul className="divide-y divide-border rounded-lg border bg-card mb-3">
               {unpaid.map((r) => (
-                <li
-                  key={r.id}
-                  className="flex items-center gap-3 px-3 py-3"
-                >
-                  <input
-                    type="checkbox"
+                <li key={r.id} className="flex items-center gap-3 px-3 py-3">
+                  <Checkbox
                     checked={checked.has(r.id)}
-                    onChange={() => toggleCheck(r.id)}
-                    className="h-5 w-5"
+                    onCheckedChange={() => toggleCheck(r.id)}
+                    className="size-5"
                   />
                   <div className="flex-1">
                     <div>{fmtDate(r.date)}</div>
-                    <div className="text-sm text-neutral-500">
+                    <div className="text-sm text-muted-foreground">
                       {formatCents(r.amountDue)}
                     </div>
                   </div>
-                  <button
+                  <Button
                     onClick={() => setPaid([r.id], true)}
-                    className="rounded-lg bg-green-600 text-white px-4 py-2 text-sm font-medium"
+                    className="bg-green-600 hover:bg-green-700 text-white h-9 px-4"
                   >
                     Paid
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
 
           {checked.size > 0 && (
-            <button
+            <Button
               onClick={() => setPaid([...checked], true)}
-              className="w-full rounded-lg bg-green-600 text-white py-3 font-medium mb-6"
+              className="w-full bg-green-600 hover:bg-green-700 text-white h-11 text-base mb-6"
             >
               Mark {checked.size} paid · {formatCents(checkedTotal)}
-            </button>
+            </Button>
           )}
 
           {paid.length > 0 && (
             <>
-              <h2 className="text-sm font-semibold text-neutral-500 mb-2">
+              <h2 className="text-sm font-semibold text-muted-foreground mb-2">
                 Paid ({paid.length})
               </h2>
-              <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white">
+              <ul className="divide-y divide-border rounded-lg border bg-card">
                 {paid.map((r) => (
                   <li
                     key={r.id}
                     className="flex items-center justify-between px-3 py-3"
                   >
                     <div>
-                      <div className="text-neutral-500">{fmtDate(r.date)}</div>
-                      <div className="text-sm text-neutral-400">
+                      <div className="text-muted-foreground">
+                        {fmtDate(r.date)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
                         {formatCents(r.amountDue)}
                       </div>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setPaid([r.id], false)}
-                      className="text-neutral-400 text-sm"
+                      className="text-muted-foreground"
                     >
                       Undo
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
