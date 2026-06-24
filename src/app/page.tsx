@@ -165,19 +165,22 @@ export default function OverviewPage() {
         ) : (
           <ItemGroup>
             {data.sessions.map((s) => (
-              <Item key={s.sessionId} variant="outline">
-                <ItemContent>
-                  <ItemTitle>{fmtDate(s.date)}</ItemTitle>
-                  <ItemDescription>
-                    {formatCents(s.rate)} · {s.total}{" "}
-                    {s.total === 1 ? "player" : "players"}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions>
-                  <Badge variant="secondary">
-                    {s.paid}/{s.total} paid
-                  </Badge>
-                </ItemActions>
+              <Item key={s.sessionId} asChild variant="outline">
+                <Link href="/sessions">
+                  <ItemContent>
+                    <ItemTitle>{fmtDate(s.date)}</ItemTitle>
+                    <ItemDescription>
+                      {formatCents(s.rate)} · {s.total}{" "}
+                      {s.total === 1 ? "player" : "players"}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <Badge variant="secondary">
+                      {s.paid}/{s.total} paid
+                    </Badge>
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </ItemActions>
+                </Link>
               </Item>
             ))}
           </ItemGroup>

@@ -1,6 +1,45 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { attendances, sessions } from "@/db/schema";
+
+// GET /api/sessions — session summaries, newest first.
+export async function GET() {
+  // Low volume: join attendances→sessions and tally per session in JS, like
+  // /api/overview does.
+  const rows = await db
+    .select({
+      sessionId: attendances.sessionId,
+      date: sessions.date,
+      rate: sessions.rate,
+      paid: attendances.paid,
+    })
+    .from(attendances)
+    .innerJoin(sessions, eq(attendances.sessionId, sessions.id));
+
+  const bySession = new Map<
+    number,
+    { id: number; date: Date; rate: number; total: number; paid: number }
+  >();
+  for (const r of rows) {
+    const s = bySession.get(r.sessionId) ?? {
+      id: r.sessionId,
+      date: r.date,
+      rate: r.rate,
+      total: 0,
+      paid: 0,
+    };
+    s.total += 1;
+    if (r.paid) s.paid += 1;
+    bySession.set(r.sessionId, s);
+  }
+
+  const list = [...bySession.values()]
+    .map((s) => ({ ...s, unpaid: s.total - s.paid }))
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  return NextResponse.json({ sessions: list });
+}
 
 export async function POST(req: Request) {
   let body: { date?: unknown; rate?: unknown; playerIds?: unknown; note?: unknown };
