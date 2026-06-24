@@ -2,8 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import type { Player } from "@/db/schema";
 import { formatCents, parseDollarsToCents } from "@/lib/money";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import {
+  Item,
+  ItemGroup,
+  ItemContent,
+  ItemTitle,
+} from "@/components/ui/item";
+import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 function todayStr(): string {
   const d = new Date();
@@ -29,6 +42,7 @@ export default function NewSessionPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPlayers();
     fetch("/api/sessions/last-rate")
       .then((r) => r.json())
@@ -105,98 +119,95 @@ export default function NewSessionPage() {
   const cents = parseDollarsToCents(rate);
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">New session</h1>
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold">New session</h1>
 
-      <div className="flex gap-3 mb-4">
-        <label className="flex-1">
-          <span className="block text-sm text-neutral-500 mb-1">Date</span>
-          <input
+      <div className="flex gap-3">
+        <Field className="flex-1">
+          <FieldLabel htmlFor="date">Date</FieldLabel>
+          <Input
+            id="date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2"
           />
-        </label>
-        <label className="w-32">
-          <span className="block text-sm text-neutral-500 mb-1">Rate ($)</span>
-          <input
+        </Field>
+        <Field className="w-32">
+          <FieldLabel htmlFor="rate">Rate ($)</FieldLabel>
+          <Input
+            id="rate"
             type="text"
             inputMode="decimal"
             value={rate}
-            defaultValue={10.00}
             onChange={(e) => setRate(e.target.value)}
             placeholder="10.00"
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2"
           />
-        </label>
+        </Field>
       </div>
 
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm text-neutral-500">
-          {selected.size} selected
-        </span>
+      <div className="flex items-center justify-between">
+        <Badge variant="secondary">{selected.size} selected</Badge>
         {cents !== null && selected.size > 0 && (
-          <span className="text-sm text-neutral-500">
+          <span className="text-sm text-muted-foreground">
             Total {formatCents(cents * selected.size)}
           </span>
         )}
       </div>
 
-      <input
+      <Input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search or add a player"
-        className="w-full rounded-lg border border-neutral-300 px-3 py-2 mb-2"
       />
 
       {canAddNew && (
-        <button
+        <Button
+          variant="outline"
           onClick={addAndSelect}
-          className="w-full text-left rounded-lg border border-dashed border-blue-400 text-blue-600 px-3 py-2 mb-2"
+          className="w-full justify-start border-dashed"
         >
-          + Add &ldquo;{search.trim()}&rdquo; as a new player
-        </button>
+          <Plus className="size-4" />
+          Add &ldquo;{search.trim()}&rdquo; as a new player
+        </Button>
       )}
 
-      <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white mb-4">
-        {filtered.length === 0 ? (
-          <li className="px-3 py-3 text-neutral-400">No players.</li>
-        ) : (
-          filtered.map((p) => {
+      {filtered.length === 0 ? (
+        <Empty className="border rounded-xl py-10">
+          <EmptyHeader>
+            <EmptyTitle>No players</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <ItemGroup>
+          {filtered.map((p) => {
             const on = selected.has(p.id);
             return (
-              <li key={p.id}>
-                <button
-                  onClick={() => toggle(p.id)}
-                  className="w-full flex items-center justify-between px-3 py-3 text-left"
-                >
-                  <span>{p.name}</span>
-                  <span
-                    className={`h-6 w-6 rounded-full border flex items-center justify-center text-sm ${
-                      on
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "border-neutral-300 text-transparent"
-                    }`}
-                  >
-                    ✓
-                  </span>
-                </button>
-              </li>
+              <Item key={p.id} asChild variant={on ? "muted" : "outline"}>
+                <label>
+                  <Checkbox
+                    checked={on}
+                    onCheckedChange={() => toggle(p.id)}
+                    className="size-5"
+                  />
+                  <ItemContent>
+                    <ItemTitle>{p.name}</ItemTitle>
+                  </ItemContent>
+                </label>
+              </Item>
             );
-          })
-        )}
-      </ul>
+          })}
+        </ItemGroup>
+      )}
 
-      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
 
-      <button
+      <Button
         onClick={submit}
         disabled={submitting || selected.size === 0}
-        className="w-full rounded-lg bg-blue-600 text-white py-3 font-medium disabled:opacity-50"
+        className="w-full h-11 text-base"
       >
         {submitting ? "Creating…" : "Create session"}
-      </button>
+      </Button>
     </div>
   );
 }

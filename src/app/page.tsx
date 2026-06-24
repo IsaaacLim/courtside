@@ -2,8 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { formatCents } from "@/lib/money";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Item,
+  ItemGroup,
+  ItemContent,
+  ItemTitle,
+  ItemDescription,
+  ItemActions,
+} from "@/components/ui/item";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
 
 type Overview = {
   totalOutstanding: number;
@@ -45,91 +67,122 @@ export default function OverviewPage() {
       });
   }, []);
 
-  if (loading) return <p className="text-muted-foreground">Loading…</p>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner className="size-6" />
+      </div>
+    );
   if (!data)
-    return <p className="text-destructive">Could not load overview.</p>;
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Could not load overview</EmptyTitle>
+          <EmptyDescription>Check your connection and retry.</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
 
   const owing = data.playerBalances.filter((p) => p.owed > 0);
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Overview</h1>
+    <div className="space-y-6">
+      <h1 className="text-xl font-bold">Overview</h1>
 
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <Card className="p-4 gap-1">
-          <div className="text-sm text-muted-foreground">Outstanding</div>
-          <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-            {formatCents(data.totalOutstanding)}
-          </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Card>
+          <CardHeader>
+            <CardDescription>Outstanding</CardDescription>
+            <CardTitle className="text-2xl text-red-600 dark:text-red-400">
+              {formatCents(data.totalOutstanding)}
+            </CardTitle>
+          </CardHeader>
         </Card>
-        <Card className="p-4 gap-1">
-          <div className="text-sm text-muted-foreground">Collected</div>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {formatCents(data.totalCollected)}
-          </div>
+        <Card>
+          <CardHeader>
+            <CardDescription>Collected</CardDescription>
+            <CardTitle className="text-2xl text-green-600 dark:text-green-400">
+              {formatCents(data.totalCollected)}
+            </CardTitle>
+          </CardHeader>
         </Card>
       </div>
 
-      <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-        Who owes ({owing.length})
-      </h2>
-      {owing.length === 0 ? (
-        <p className="text-muted-foreground mb-6">Everyone&rsquo;s settled. 🎉</p>
-      ) : (
-        <ul className="divide-y divide-border rounded-lg border bg-card mb-6">
-          {owing.map((p) => (
-            <li key={p.playerId}>
-              <Link
-                href="/payments"
-                className="flex items-center justify-between px-3 py-3"
-              >
-                <div>
-                  <div>{p.name}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {p.unpaid} unpaid {p.unpaid === 1 ? "session" : "sessions"}
-                  </div>
-                </div>
-                <div className="font-semibold text-red-600 dark:text-red-400">
-                  {formatCents(p.owed)}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            Who owes
+          </h2>
+          <Badge variant="secondary">{owing.length}</Badge>
+        </div>
+        {owing.length === 0 ? (
+          <Empty className="border rounded-xl py-8">
+            <EmptyHeader>
+              <EmptyTitle>Everyone&rsquo;s settled 🎉</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <ItemGroup>
+            {owing.map((p) => (
+              <Item key={p.playerId} asChild variant="outline">
+                <Link href="/payments">
+                  <ItemContent>
+                    <ItemTitle>{p.name}</ItemTitle>
+                    <ItemDescription>
+                      {p.unpaid} unpaid{" "}
+                      {p.unpaid === 1 ? "session" : "sessions"}
+                    </ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <span className="font-semibold text-red-600 dark:text-red-400">
+                      {formatCents(p.owed)}
+                    </span>
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </ItemActions>
+                </Link>
+              </Item>
+            ))}
+          </ItemGroup>
+        )}
+      </section>
 
-      <h2 className="text-sm font-semibold text-muted-foreground mb-2">
-        Recent sessions
-      </h2>
-      {data.sessions.length === 0 ? (
-        <p className="text-muted-foreground">
-          No sessions yet.{" "}
-          <Link href="/sessions/new" className="text-primary underline-offset-4 hover:underline">
-            Create one
-          </Link>
-          .
-        </p>
-      ) : (
-        <ul className="divide-y divide-border rounded-lg border bg-card">
-          {data.sessions.map((s) => (
-            <li
-              key={s.sessionId}
-              className="flex items-center justify-between px-3 py-3"
-            >
-              <div>
-                <div>{fmtDate(s.date)}</div>
-                <div className="text-sm text-muted-foreground">
-                  {formatCents(s.rate)} · {s.total}{" "}
-                  {s.total === 1 ? "player" : "players"}
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {s.paid}/{s.total} paid
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-muted-foreground">
+          Recent sessions
+        </h2>
+        {data.sessions.length === 0 ? (
+          <Empty className="border rounded-xl py-8">
+            <EmptyHeader>
+              <EmptyTitle>No sessions yet</EmptyTitle>
+              <EmptyDescription>
+                <Link href="/sessions/new" className="text-primary underline-offset-4 hover:underline">
+                  Create one
+                </Link>{" "}
+                to get started.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <ItemGroup>
+            {data.sessions.map((s) => (
+              <Item key={s.sessionId} variant="outline">
+                <ItemContent>
+                  <ItemTitle>{fmtDate(s.date)}</ItemTitle>
+                  <ItemDescription>
+                    {formatCents(s.rate)} · {s.total}{" "}
+                    {s.total === 1 ? "player" : "players"}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <Badge variant="secondary">
+                    {s.paid}/{s.total} paid
+                  </Badge>
+                </ItemActions>
+              </Item>
+            ))}
+          </ItemGroup>
+        )}
+      </section>
     </div>
   );
 }

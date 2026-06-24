@@ -3,10 +3,19 @@
 import { useEffect, useState } from "react";
 import type { Player } from "@/db/schema";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Item,
+  ItemGroup,
+  ItemContent,
+  ItemTitle,
+  ItemActions,
+} from "@/components/ui/item";
+import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import {
   Dialog,
   DialogContent,
@@ -132,10 +141,10 @@ export default function PlayersPage() {
   }
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Players</h1>
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold">Players</h1>
 
-      <form onSubmit={addPlayer} className="flex gap-2 mb-4">
+      <form onSubmit={addPlayer} className="flex gap-2">
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -147,64 +156,67 @@ export default function PlayersPage() {
         </Button>
       </form>
 
-      <div className="flex items-center gap-2 mb-3">
+      <Label className="flex items-center gap-2 text-muted-foreground font-normal">
         <Checkbox
-          id="show-inactive"
           checked={includeInactive}
           onCheckedChange={(c) => setIncludeInactive(c === true)}
         />
-        <Label htmlFor="show-inactive" className="text-muted-foreground">
-          Show inactive
-        </Label>
-      </div>
+        Show inactive
+      </Label>
 
       {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <div className="flex justify-center py-16">
+          <Spinner className="size-6" />
+        </div>
       ) : players.length === 0 ? (
-        <p className="text-muted-foreground">No players yet.</p>
+        <Empty className="border rounded-xl py-10">
+          <EmptyHeader>
+            <EmptyTitle>No players yet</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border bg-card">
+        <ItemGroup>
           {players.map((p) => (
-            <li
-              key={p.id}
-              className="flex items-center justify-between gap-2 px-3 py-2"
-            >
-              <span
-                className={cn(
-                  "truncate",
-                  !p.active && "text-muted-foreground line-through",
-                )}
-              >
-                {p.name}
-              </span>
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openRename(p)}
+            <Item key={p.id} variant="outline">
+              <ItemContent>
+                <ItemTitle
+                  className={
+                    p.active ? "" : "text-muted-foreground line-through"
+                  }
                 >
-                  Rename
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
-                  onClick={() => openMerge(p)}
-                >
-                  Merge
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
-                  onClick={() => toggleActive(p)}
-                >
-                  {p.active ? "Deactivate" : "Reactivate"}
-                </Button>
-              </div>
-            </li>
+                  {p.name}
+                </ItemTitle>
+              </ItemContent>
+              <ItemActions>
+                <ButtonGroup>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openRename(p)}
+                  >
+                    Rename
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={() => openMerge(p)}
+                  >
+                    Merge
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={() => toggleActive(p)}
+                  >
+                    {p.active ? "Deactivate" : "Reactivate"}
+                  </Button>
+                </ButtonGroup>
+              </ItemActions>
+            </Item>
           ))}
-        </ul>
+        </ItemGroup>
       )}
 
       {/* Rename dialog */}
