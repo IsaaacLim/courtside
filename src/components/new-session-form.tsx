@@ -47,17 +47,30 @@ function parseDateStr(s: string): Date | undefined {
 export function NewSessionForm({
   onSuccess,
   fill = false,
+  session,
 }: {
   onSuccess?: () => void;
   /** Fill the parent's height and scroll only the player list (drawer mode). */
   fill?: boolean;
+  /** When provided, the form edits this session instead of creating one. */
+  session?: {
+    id: number;
+    date: string; // YYYY-MM-DD
+    rate: number; // cents
+    playerIds: number[];
+  };
 }) {
   const router = useRouter();
+  const editing = session != null;
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [date, setDate] = useState(todayStr());
+  const [selected, setSelected] = useState<Set<number>>(
+    () => new Set(session?.playerIds ?? []),
+  );
+  const [date, setDate] = useState(session ? session.date : todayStr());
   const [dateOpen, setDateOpen] = useState(false);
-  const [rate, setRate] = useState(""); // dollar string
+  const [rate, setRate] = useState(
+    session ? (session.rate / 100).toString() : "",
+  ); // dollar string
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -71,11 +84,15 @@ export function NewSessionForm({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPlayers();
-    fetch("/api/sessions/last-rate")
-      .then((r) => r.json())
-      .then((d) => {
-        if (typeof d.rate === "number") setRate((d.rate / 100).toString());
-      });
+    // Prefill the rate from the last session only when creating a new one.
+    if (!editing) {
+      fetch("/api/sessions/last-rate")
+        .then((r) => r.json())
+        .then((d) => {
+          if (typeof d.rate === "number") setRate((d.rate / 100).toString());
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = useMemo(() => {
@@ -128,11 +145,14 @@ export function NewSessionForm({
       return;
     }
     setSubmitting(true);
-    const res = await fetch("/api/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ date, rate: cents, playerIds: [...selected] }),
-    });
+    const res = await fetch(
+      editing ? `/api/sessions/${session!.id}` : "/api/sessions",
+      {
+        method: editing ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ date, rate: cents, playerIds: [...selected] }),
+      },
+    );
     setSubmitting(false);
     if (res.ok) {
       notifyDataChanged();
@@ -141,7 +161,9 @@ export function NewSessionForm({
       else router.push("/");
     } else {
       const d = await res.json().catch(() => ({}));
-      setError(d.error ?? "Could not create session.");
+      setError(
+        d.error ?? `Could not ${editing ? "update" : "create"} session.`,
+      );
     }
   }
 
@@ -267,7 +289,13 @@ export function NewSessionForm({
         disabled={submitting || selected.size === 0}
         className="w-full h-11 text-base shrink-0"
       >
-        {submitting ? "Creating…" : "Create session"}
+        {editing
+          ? submitting
+            ? "Saving…"
+            : "Save changes"
+          : submitting
+            ? "Creating…"
+            : "Create session"}
       </Button>
     </div>
   );

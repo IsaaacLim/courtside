@@ -2,12 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, ChevronRight, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ChevronRight,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { useDataRefresh, notifyDataChanged } from "@/hooks/use-data-refresh";
 import { PageHeader } from "@/components/page-header";
+import { NewSessionForm } from "@/components/new-session-form";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +74,14 @@ function fmtDate(iso: string): string {
   });
 }
 
+// ISO timestamp -> "YYYY-MM-DD" in local time, for the edit form's date input.
+function toDateInput(iso: string): string {
+  const d = new Date(iso);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 function SessionList({
   sessions,
   onOpen,
@@ -111,6 +132,7 @@ export default function SessionsPage() {
   const [rows, setRows] = useState<SessionAttendance[]>([]);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [loadingRows, setLoadingRows] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   async function loadSessions(silent = false) {
     if (!silent) setLoading(true);
@@ -155,6 +177,16 @@ export default function SessionsPage() {
     setSelected(null);
     // Refetch so a now-fully-paid session moves to Archive.
     loadSessions();
+  }
+
+  // After a successful edit: close the drawer and refetch the updated session.
+  async function afterEdit() {
+    setEditOpen(false);
+    const id = selected?.id;
+    const list = await loadSessions(true);
+    const updated = list.find((s) => s.id === id);
+    if (updated) openSession(updated); // re-pulls the summary + attendance rows
+    toast.success("Session updated");
   }
 
   async function deleteSession() {
@@ -250,7 +282,37 @@ export default function SessionsPage() {
             <ArrowLeft className="size-6" />
           </Button>
 
-          <AlertDialog>
+          <div className="flex items-center gap-2">
+            <Drawer open={editOpen} onOpenChange={setEditOpen}>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Edit session"
+                onClick={() => setEditOpen(true)}
+                className="px-0"
+              >
+                <Pencil className="size-6" />
+              </Button>
+              <DrawerContent className="h-[85vh]">
+                <DrawerHeader className="text-left shrink-0">
+                  <DrawerTitle>Edit session</DrawerTitle>
+                </DrawerHeader>
+                <div className="min-h-0 flex-1 px-4 pb-8">
+                  <NewSessionForm
+                    fill
+                    session={{
+                      id: selected.id,
+                      date: toDateInput(selected.date),
+                      rate: selected.rate,
+                      playerIds: rows.map((r) => r.playerId),
+                    }}
+                    onSuccess={afterEdit}
+                  />
+                </div>
+              </DrawerContent>
+            </Drawer>
+
+            <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
                 variant="ghost"
@@ -281,7 +343,8 @@ export default function SessionsPage() {
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
-          </AlertDialog>
+            </AlertDialog>
+          </div>
         </div>
       </div>
 
