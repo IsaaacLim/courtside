@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import { MotionConfig } from "motion/react";
 import { AppNav } from "@/components/app-nav";
 import { NewSessionFab } from "@/components/new-session-fab";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -41,12 +42,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-24 pb-[calc(6rem+env(safe-area-inset-bottom))]">
-            {children}
-          </main>
-          <NewSessionFab />
-          <AppNav />
-          <Toaster position="top-center" />
+          <MotionConfig reducedMotion="user">
+            <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-24 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+              {children}
+            </main>
+            <NewSessionFab />
+            <AppNav />
+            <Toaster position="top-center" />
+          </MotionConfig>
         </ThemeProvider>
       </body>
     </html>

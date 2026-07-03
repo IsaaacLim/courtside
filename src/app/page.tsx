@@ -6,6 +6,12 @@ import { ChevronRight } from "lucide-react";
 import { formatCents } from "@/lib/money";
 import { useDataRefresh } from "@/hooks/use-data-refresh";
 import { PageHeader } from "@/components/page-header";
+import { PlayerDetail } from "@/components/player-detail";
+import {
+  ExpandOverlay,
+  ExpandTrigger,
+  useExpandNudge,
+} from "@/components/expanding-detail";
 import {
   Card,
   CardDescription,
@@ -59,11 +65,22 @@ function fmtDate(iso: string): string {
 export default function OverviewPage() {
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const { nudge, requestOpen, reset } = useExpandNudge();
 
   async function load() {
     const d = await fetch("/api/overview").then((r) => r.json());
     setData(d);
     setLoading(false);
+  }
+
+  function back() {
+    setSelectedPlayer(null);
+    reset();
+    load(); // refresh balances after any mark-paid in the detail
   }
 
   useEffect(() => {
@@ -92,8 +109,9 @@ export default function OverviewPage() {
   const owing = data.playerBalances.filter((p) => p.owed > 0);
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Overview" />
+    <>
+      <div className="space-y-6">
+        <PageHeader title="Overview" />
 
       <div className="grid grid-cols-2 gap-3">
         <Card>
@@ -130,23 +148,29 @@ export default function OverviewPage() {
         ) : (
           <ItemGroup>
             {owing.map((p) => (
-              <Item key={p.playerId} asChild variant="outline">
-                <Link href="/payments">
-                  <ItemContent>
-                    <ItemTitle>{p.name}</ItemTitle>
-                    <ItemDescription>
-                      {p.unpaid} unpaid{" "}
-                      {p.unpaid === 1 ? "session" : "sessions"}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <span className="font-semibold text-red-600 dark:text-red-400">
-                      {formatCents(p.owed)}
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </ItemActions>
-                </Link>
-              </Item>
+              <ExpandTrigger
+                key={p.playerId}
+                layoutId={`player-${p.playerId}`}
+                nudge={nudge}
+                onOpen={(y) =>
+                  requestOpen(`player-${p.playerId}`, y, () =>
+                    setSelectedPlayer({ id: p.playerId, name: p.name }),
+                  )
+                }
+              >
+                <ItemContent>
+                  <ItemTitle>{p.name}</ItemTitle>
+                  <ItemDescription>
+                    {p.unpaid} unpaid {p.unpaid === 1 ? "session" : "sessions"}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <span className="font-semibold text-red-600 dark:text-red-400">
+                    {formatCents(p.owed)}
+                  </span>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </ItemActions>
+              </ExpandTrigger>
             ))}
           </ItemGroup>
         )}
@@ -192,6 +216,16 @@ export default function OverviewPage() {
           </ItemGroup>
         )}
       </section>
-    </div>
+      </div>
+
+      <ExpandOverlay
+        open={!!selectedPlayer}
+        layoutId={`player-${selectedPlayer?.id}`}
+      >
+        {selectedPlayer && (
+          <PlayerDetail player={selectedPlayer} onBack={back} />
+        )}
+      </ExpandOverlay>
+    </>
   );
 }
