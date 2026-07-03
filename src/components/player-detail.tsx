@@ -110,6 +110,7 @@ export function PlayerDetail({
 
   const unpaid = rows.filter((r) => !r.paid);
   const paid = rows.filter((r) => r.paid);
+  const allSelected = unpaid.length > 0 && unpaid.every((r) => checked.has(r.id));
   const outstanding = unpaid.reduce((sum, r) => sum + r.amountDue, 0);
   const checkedTotal = unpaid
     .filter((r) => checked.has(r.id))
@@ -136,11 +137,29 @@ export function PlayerDetail({
       ) : (
         <>
           <section className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-muted-foreground">
-                Unpaid
-              </h2>
-              <Badge variant="secondary">{unpaid.length}</Badge>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-muted-foreground">
+                  Unpaid
+                </h2>
+                <Badge variant="secondary">{unpaid.length}</Badge>
+              </div>
+              {unpaid.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setChecked(
+                      allSelected
+                        ? new Set()
+                        : new Set(unpaid.map((r) => r.id)),
+                    )
+                  }
+                  className="-mr-2 text-muted-foreground"
+                >
+                  {allSelected ? "Deselect all" : "Select all"}
+                </Button>
+              )}
             </div>
             {unpaid.length === 0 ? (
               <Empty className="border rounded-xl py-8">
@@ -206,15 +225,6 @@ export function PlayerDetail({
             )}
           </section>
 
-          {checked.size > 0 && (
-            <Button
-              onClick={() => setPaid([...checked], true)}
-              className="w-full bg-green-600 hover:bg-green-700 text-white h-11 text-base"
-            >
-              Mark {checked.size} paid · {formatCents(checkedTotal)}
-            </Button>
-          )}
-
           {paid.length > 0 && (
             <section className="space-y-2">
               <div className="flex items-center gap-2">
@@ -258,7 +268,25 @@ export function PlayerDetail({
               </ItemGroup>
             </section>
           )}
+
+          {/* Spacer so the last rows can scroll clear of the floating bar. */}
+          {checked.size > 0 && <div className="h-16" aria-hidden />}
         </>
+      )}
+
+      {/* Floating action button — sits above the mobile home bar; the
+          transparent gutter is click-through so it doesn't block scrolling. */}
+      {checked.size > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+          <div className="mx-auto max-w-2xl">
+            <Button
+              onClick={() => setPaid([...checked], true)}
+              className="pointer-events-auto w-full bg-green-600 hover:bg-green-700 text-white h-11 text-base shadow-lg shadow-green-600/30"
+            >
+              Mark {checked.size} paid · {formatCents(checkedTotal)}
+            </Button>
+          </div>
+        </div>
       )}
     </>
   );
