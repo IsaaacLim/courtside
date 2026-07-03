@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { formatCents } from "@/lib/money";
+import { useDataRefresh } from "@/hooks/use-data-refresh";
 import {
   Card,
   CardDescription,
@@ -58,14 +59,18 @@ export default function OverviewPage() {
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
 
+  async function load() {
+    const d = await fetch("/api/overview").then((r) => r.json());
+    setData(d);
+    setLoading(false);
+  }
+
   useEffect(() => {
-    fetch("/api/overview")
-      .then((r) => r.json())
-      .then((d) => {
-        setData(d);
-        setLoading(false);
-      });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
   }, []);
+
+  useDataRefresh(load);
 
   if (loading)
     return (

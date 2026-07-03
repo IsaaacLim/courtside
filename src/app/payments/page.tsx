@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { useDataRefresh } from "@/hooks/use-data-refresh";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -67,6 +68,19 @@ export default function PaymentsPage() {
         }
       });
   }, []);
+
+  // Refetch quietly when a session is created from the global drawer: refresh
+  // the player list and, if one is open, its attendance rows.
+  useDataRefresh(async () => {
+    const d = await fetch("/api/players").then((r) => r.json());
+    setPlayers(d.players ?? []);
+    if (selectedPlayer) {
+      const data = await fetch(
+        `/api/attendances?playerId=${selectedPlayer.id}`,
+      ).then((r) => r.json());
+      setRows(data.attendances ?? []);
+    }
+  });
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

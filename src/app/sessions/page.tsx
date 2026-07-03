@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, ChevronRight, Plus } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { useDataRefresh } from "@/hooks/use-data-refresh";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -98,8 +99,8 @@ export default function SessionsPage() {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [loadingRows, setLoadingRows] = useState(false);
 
-  async function loadSessions() {
-    setLoading(true);
+  async function loadSessions(silent = false) {
+    if (!silent) setLoading(true);
     const res = await fetch("/api/sessions");
     const data = await res.json();
     const list: SessionSummary[] = data.sessions ?? [];
@@ -107,6 +108,11 @@ export default function SessionsPage() {
     setLoading(false);
     return list;
   }
+
+  // Refetch quietly when a session is created from the global drawer.
+  useDataRefresh(() => {
+    loadSessions(true);
+  });
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -173,15 +179,7 @@ export default function SessionsPage() {
     const archived = sessions.filter((s) => s.unpaid === 0);
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">Sessions</h1>
-          <Button asChild size="sm">
-            <Link href="/sessions/new">
-              <Plus className="size-4" />
-              New session
-            </Link>
-          </Button>
-        </div>
+        <h1 className="text-xl font-bold">Sessions</h1>
 
         {loading ? (
           <div className="flex justify-center py-16">

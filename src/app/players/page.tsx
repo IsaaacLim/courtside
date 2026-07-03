@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Player } from "@/db/schema";
+import { useDataRefresh } from "@/hooks/use-data-refresh";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
@@ -57,8 +58,8 @@ export default function PlayersPage() {
   const [mergeTargetId, setMergeTargetId] = useState("");
   const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     const res = await fetch(
       `/api/players?includeInactive=${includeInactive ? "1" : "0"}`,
     );
@@ -72,6 +73,11 @@ export default function PlayersPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeInactive]);
+
+  // Refetch quietly when players/sessions change from the global drawer.
+  useDataRefresh(() => {
+    load(true);
+  });
 
   async function addPlayer(e: React.FormEvent) {
     e.preventDefault();
