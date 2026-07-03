@@ -61,7 +61,7 @@ export function ExpandTrigger({
         // Fade the border out as it expands (it would otherwise scale into a
         // thick frame) and back in as it collapses.
         className={cn(
-          "absolute inset-0 rounded-lg border bg-background transition-[border-color] duration-200",
+          "absolute inset-0 rounded-lg border bg-raised transition-[border-color] duration-200",
           leaving ? "border-transparent" : "border-border",
         )}
       />

@@ -24,8 +24,8 @@ export function AppNav() {
   if (pathname === "/login") return null;
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 rounded-t-2xl border-t border-x border-border bg-background/95 backdrop-blur shadow-[0_-4px_16px_-6px_rgba(0,0,0,0.12)] pb-[env(safe-area-inset-bottom)]">
-      <div className="max-w-2xl mx-auto flex items-center">
+    <nav className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 px-2">
+      <div className="mx-auto flex max-w-md items-center overflow-hidden rounded-full border border-border bg-raised/90 shadow-lg backdrop-blur">
         {TABS.map((tab) => {
           const active =
             tab.href === "/"
@@ -37,7 +37,7 @@ export function AppNav() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "flex-1 flex flex-col items-center gap-1 py-4 text-xs font-medium transition-colors",
+                "flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors",
                 active ? "text-primary" : "text-muted-foreground",
               )}
             >

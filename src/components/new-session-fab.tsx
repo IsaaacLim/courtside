@@ -31,7 +31,7 @@ export function NewSessionFab() {
         <Button
           aria-label="New session"
           className={cn(
-            "fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-full shadow-lg transition-all duration-300 ease-in-out",
+            "fixed right-2 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-full shadow-lg transition-all duration-300 ease-in-out",
             hidden && "scale-0 opacity-0 pointer-events-none",
           )}
         >

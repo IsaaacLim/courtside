@@ -36,6 +36,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-raised: var(--raised);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --radius-sm: calc(var(--radius) * 0.6);
@@ -57,10 +58,11 @@ body {
    indigo primary, calm lavender-gray surfaces (secondary/muted/accent stay
    neutral). Each value notes the source ramp step. */
 :root {
-  --background: oklch(98.51% 0 0deg);                 /* #fafafa */
+  --background: oklch(96.88% 0.004 301.42deg);        /* #f5f4f7 */
   --foreground: oklch(33.48% 0.03 281.97deg);         /* surface-900 */
   --card: oklch(100% 0 0deg);                         /* body background (white) */
   --card-foreground: oklch(33.48% 0.03 281.97deg);    /* surface-900 */
+  --raised: oklch(98.51% 0 0deg);                     /* #fafafa (raised surface) */
   --popover: oklch(100% 0 0deg);
   --popover-foreground: oklch(33.48% 0.03 281.97deg);
   --primary: oklch(66.25% 0.18 273.14deg);            /* primary-500 */
@@ -96,6 +98,7 @@ body {
   --foreground: oklch(90.64% 0.01 267.4deg);          /* surface-50 */
   --card: oklch(33.48% 0.03 281.97deg);               /* surface-900 */
   --card-foreground: oklch(90.64% 0.01 267.4deg);
+  --raised: oklch(33.48% 0.03 281.97deg);             /* surface-900 (raised surface) */
   --popover: oklch(33.48% 0.03 281.97deg);
   --popover-foreground: oklch(90.64% 0.01 267.4deg);
   --primary: oklch(72.23% 0.14 273.55deg);            /* primary-400 (lighter for dark) */

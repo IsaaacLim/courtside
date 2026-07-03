@@ -385,7 +385,7 @@ export default function SessionsPage() {
                             aria-pressed={sel}
                             onClick={() => toggleCheck(r.id)}
                             className={cn(
-                              "cursor-pointer select-none",
+                              "cursor-pointer select-none bg-raised",
                               sel && "border-primary ring-1 ring-primary/30",
                             )}
                           >
@@ -450,7 +450,7 @@ export default function SessionsPage() {
                     </div>
                     <ItemGroup>
                       {paid.map((r) => (
-                        <Item key={r.id} variant="muted">
+                        <Item key={r.id} variant="muted" className="bg-raised">
                           <ItemContent>
                             <ItemTitle className="text-muted-foreground">
                               <Link
