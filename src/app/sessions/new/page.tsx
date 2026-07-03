@@ -2,10 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { format } from "date-fns";
+import { CalendarIcon, Plus } from "lucide-react";
 import type { Player } from "@/db/schema";
 import { formatCents, parseDollarsToCents } from "@/lib/money";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,11 +25,21 @@ import {
 } from "@/components/ui/item";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
-function todayStr(): string {
-  const d = new Date();
+function toDateStr(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function todayStr(): string {
+  return toDateStr(new Date());
+}
+
+// Parse a YYYY-MM-DD string into a Date in local time (avoids UTC drift).
+function parseDateStr(s: string): Date | undefined {
+  const [y, m, d] = s.split("-").map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d);
 }
 
 export default function NewSessionPage() {
@@ -30,6 +47,7 @@ export default function NewSessionPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [date, setDate] = useState(todayStr());
+  const [dateOpen, setDateOpen] = useState(false);
   const [rate, setRate] = useState(""); // dollar string
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -125,12 +143,31 @@ export default function NewSessionPage() {
       <div className="flex gap-3">
         <Field className="flex-1">
           <FieldLabel htmlFor="date">Date</FieldLabel>
-          <Input
-            id="date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <Popover open={dateOpen} onOpenChange={setDateOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                id="date"
+                variant="outline"
+                className="justify-start font-normal"
+              >
+                <CalendarIcon className="size-4" />
+                {parseDateStr(date)
+                  ? format(parseDateStr(date)!, "d MMM yyyy")
+                  : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={parseDateStr(date)}
+                onSelect={(d) => {
+                  if (d) setDate(toDateStr(d));
+                  setDateOpen(false);
+                }}
+                autoFocus
+              />
+            </PopoverContent>
+          </Popover>
         </Field>
         <Field className="w-32">
           <FieldLabel htmlFor="rate">Rate ($)</FieldLabel>
