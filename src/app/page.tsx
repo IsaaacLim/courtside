@@ -72,9 +72,10 @@ export default function OverviewPage() {
   const { nudge, requestOpen, reset } = useExpandNudge();
 
   async function load() {
-    const d = await fetch("/api/overview").then((r) => r.json());
+    const d: Overview = await fetch("/api/overview").then((r) => r.json());
     setData(d);
     setLoading(false);
+    return d;
   }
 
   function back() {
@@ -85,7 +86,16 @@ export default function OverviewPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
+    load().then((d) => {
+      // Deep link (e.g. from a session's player link): /?playerId=<id>
+      const pid = Number(
+        new URLSearchParams(window.location.search).get("playerId"),
+      );
+      if (Number.isInteger(pid)) {
+        const p = d.playerBalances.find((x) => x.playerId === pid);
+        if (p) setSelectedPlayer({ id: p.playerId, name: p.name });
+      }
+    });
   }, []);
 
   useDataRefresh(load);

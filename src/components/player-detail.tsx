@@ -63,7 +63,7 @@ function fmtDate(iso: string): string {
 
 /**
  * A player's payment detail: unpaid/paid sessions with mark-paid actions.
- * Rendered inside an ExpandOverlay from Payments and Overview.
+ * Rendered inside an ExpandOverlay on the Overview page.
  */
 export function PlayerDetail({
   player,

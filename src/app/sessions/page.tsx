@@ -169,7 +169,7 @@ export default function SessionsPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSessions().then((list) => {
-      // Deep link from the Payments view: /sessions?sessionId=<id>
+      // Deep link from a player's session link: /sessions?sessionId=<id>
       const sid = Number(
         new URLSearchParams(window.location.search).get("sessionId"),
       );
@@ -392,7 +392,7 @@ export default function SessionsPage() {
                             <ItemContent>
                               <ItemTitle>
                                 <Link
-                                  href={`/payments?playerId=${r.playerId}`}
+                                  href={`/?playerId=${r.playerId}`}
                                   onClick={(e) => e.stopPropagation()}
                                   className="inline-flex items-center gap-1 hover:underline underline-offset-4"
                                 >
@@ -448,7 +448,7 @@ export default function SessionsPage() {
                           <ItemContent>
                             <ItemTitle className="text-muted-foreground">
                               <Link
-                                href={`/payments?playerId=${r.playerId}`}
+                                href={`/?playerId=${r.playerId}`}
                                 className="inline-flex items-center gap-1 hover:underline underline-offset-4"
                               >
                                 {r.playerName}

@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   CalendarDays,
-  Wallet,
   Users,
   Ellipsis,
 } from "lucide-react";
@@ -14,7 +13,6 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/sessions", label: "Sessions", icon: CalendarDays },
-  { href: "/payments", label: "Payments", icon: Wallet },
   { href: "/players", label: "Players", icon: Users },
   { href: "/more", label: "More", icon: Ellipsis },
 ];
