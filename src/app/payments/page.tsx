@@ -174,19 +174,24 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title={selectedPlayer.name}
-        leading={
+      {/* Back button pinned to the very top of the viewport. */}
+      <div className="fixed inset-x-0 top-0 z-30">
+        <div className="mx-auto max-w-2xl px-4 pt-3 pb-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSelectedPlayer(null)}
-            className="-ml-2 text-muted-foreground"
+            className="px-0"
           >
-            <ArrowLeft className="size-4" />
-            All players
+            <ArrowLeft className="size-6" />
           </Button>
-        }
+        </div>
+      </div>
+
+      {/* Extra top padding clears the fixed back bar above. */}
+      <PageHeader
+        title={selectedPlayer.name}
+        className="pt-8"
         actions={
           <Badge
             variant={outstanding > 0 ? "destructive" : "secondary"}
