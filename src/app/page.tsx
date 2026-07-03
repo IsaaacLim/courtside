@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { formatCents } from "@/lib/money";
 import { useDataRefresh } from "@/hooks/use-data-refresh";
@@ -19,7 +18,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Item,
   ItemGroup,
   ItemContent,
   ItemTitle,
@@ -53,14 +51,6 @@ type Overview = {
     paid: number;
   }[];
 };
-
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export default function OverviewPage() {
   const [data, setData] = useState<Overview | null>(null);
@@ -181,47 +171,6 @@ export default function OverviewPage() {
                   <ChevronRight className="size-4 text-muted-foreground" />
                 </ItemActions>
               </ExpandTrigger>
-            ))}
-          </ItemGroup>
-        )}
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-muted-foreground">
-          Recent sessions
-        </h2>
-        {data.sessions.length === 0 ? (
-          <Empty className="border rounded-xl py-8">
-            <EmptyHeader>
-              <EmptyTitle>No sessions yet</EmptyTitle>
-              <EmptyDescription>
-                <Link href="/sessions/new" className="text-primary underline-offset-4 hover:underline">
-                  Create one
-                </Link>{" "}
-                to get started.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <ItemGroup>
-            {data.sessions.map((s) => (
-              <Item key={s.sessionId} asChild variant="outline">
-                <Link href="/sessions">
-                  <ItemContent>
-                    <ItemTitle>{fmtDate(s.date)}</ItemTitle>
-                    <ItemDescription>
-                      {formatCents(s.rate)} · {s.total}{" "}
-                      {s.total === 1 ? "player" : "players"}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <Badge variant="secondary">
-                      {s.paid}/{s.total} paid
-                    </Badge>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </ItemActions>
-                </Link>
-              </Item>
             ))}
           </ItemGroup>
         )}
