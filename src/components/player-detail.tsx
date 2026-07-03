@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, EllipsisVertical, Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { notifyDataChanged, useDataRefresh } from "@/hooks/use-data-refresh";
@@ -14,6 +15,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -60,12 +75,17 @@ export function PlayerDetail({
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [loadingRows, setLoadingRows] = useState(true);
+  const [displayName, setDisplayName] = useState(player.name);
+  const [editOpen, setEditOpen] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingRows(true);
     setChecked(new Set());
+    setDisplayName(player.name); // resync when switching players
     fetch(`/api/attendances?playerId=${player.id}`)
       .then((r) => r.json())
       .then((data) => {
@@ -76,6 +96,7 @@ export function PlayerDetail({
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player.id]);
 
   // Refetch quietly when data changes elsewhere (e.g. a session is created).
@@ -115,6 +136,27 @@ export function PlayerDetail({
     });
   }
 
+  async function saveRename() {
+    const name = nameInput.trim();
+    if (!name || name === displayName) {
+      setEditOpen(false);
+      return;
+    }
+    const res = await fetch(`/api/players/${player.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      setDisplayName(name);
+      setEditOpen(false);
+      notifyDataChanged(); // refresh player lists elsewhere
+      toast.success(`Name changed to ${name}`);
+    } else {
+      toast.error("Could not change name");
+    }
+  }
+
   const unpaid = rows.filter((r) => !r.paid);
   const paid = rows.filter((r) => r.paid);
   const allSelected = unpaid.length > 0 && unpaid.every((r) => checked.has(r.id));
@@ -130,9 +172,36 @@ export function PlayerDetail({
 
   return (
     <>
-      <ExpandBackBar onBack={onBack} />
+      <ExpandBackBar
+        onBack={onBack}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Player actions"
+                className="px-0"
+              >
+                <EllipsisVertical className="size-6" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={() => {
+                  setNameInput(displayName);
+                  setEditOpen(true);
+                }}
+              >
+                <Pencil className="size-4" />
+                Edit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
 
-      <h1 className="text-2xl font-bold">{player.name}</h1>
+      <h1 className="text-2xl font-bold">{displayName}</h1>
 
       <Card>
         <CardHeader>
@@ -305,6 +374,35 @@ export function PlayerDetail({
           {checked.size > 0 && <div className="h-16" aria-hidden />}
         </>
       )}
+
+      {/* Rename dialog — the input auto-focuses so the keyboard opens. */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent
+          onOpenAutoFocus={(e) => {
+            // Focus the input (not the default close button) to raise the keyboard.
+            e.preventDefault();
+            nameRef.current?.focus();
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Edit name</DialogTitle>
+          </DialogHeader>
+          <Input
+            ref={nameRef}
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveRename();
+            }}
+            placeholder="Player name"
+          />
+          <DialogFooter>
+            <Button onClick={saveRename} disabled={!nameInput.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Floating action button — sits above the mobile home bar; the
           transparent gutter is click-through so it doesn't block scrolling. */}
