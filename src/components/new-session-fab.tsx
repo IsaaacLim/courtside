@@ -4,6 +4,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Drawer,
   DrawerContent,
@@ -20,12 +21,19 @@ export function NewSessionFab() {
   // No FAB on the login screen.
   if (pathname === "/login") return null;
 
+  // On the "More" page, shrink + fade the button out (kept mounted so the
+  // transition can play) rather than removing it abruptly.
+  const hidden = pathname === "/more";
+
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
         <Button
           aria-label="New session"
-          className="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-full shadow-lg"
+          className={cn(
+            "fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 size-14 rounded-full shadow-lg transition-all duration-300 ease-in-out",
+            hidden && "scale-0 opacity-0 pointer-events-none",
+          )}
         >
           <Plus className="size-6" />
         </Button>
