@@ -8,6 +8,8 @@ import {
   EllipsisVertical,
   Pencil,
   Trash2,
+  User,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCents } from "@/lib/money";
@@ -121,9 +123,13 @@ function SessionList({
         >
           <ItemContent>
             <ItemTitle>{fmtDate(s.date)}</ItemTitle>
-            <ItemDescription>
-              {formatCents(s.rate)} · {s.total}{" "}
-              {s.total === 1 ? "player" : "players"}
+            <ItemDescription className="flex items-center gap-1">
+              {formatCents(s.rate)} · {s.total}
+              {s.total === 1 ? (
+                <User className="size-3.5" />
+              ) : (
+                <Users className="size-3.5" />
+              )}
             </ItemDescription>
           </ItemContent>
           <ItemActions>
