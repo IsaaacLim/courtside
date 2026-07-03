@@ -2,16 +2,28 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ChevronRight, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { useDataRefresh } from "@/hooks/use-data-refresh";
+import { useDataRefresh, notifyDataChanged } from "@/hooks/use-data-refresh";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Item,
   ItemGroup,
@@ -145,6 +157,21 @@ export default function SessionsPage() {
     loadSessions();
   }
 
+  async function deleteSession() {
+    if (!selected) return;
+    const label = fmtDate(selected.date);
+    const res = await fetch(`/api/sessions/${selected.id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      notifyDataChanged();
+      back(); // returns to the list and refetches
+      toast.success(`Session on ${label} removed`);
+    } else {
+      toast.error("Could not delete session");
+    }
+  }
+
   async function setPaid(ids: number[], paid: boolean) {
     await Promise.all(
       ids.map((id) =>
@@ -216,19 +243,52 @@ export default function SessionsPage() {
 
   return (
     <div className="space-y-4">
+      {/* Back and delete pinned to the very top of the viewport. */}
+      <div className="fixed inset-x-0 top-0 z-30">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 pt-3 pb-2">
+          <Button variant="ghost" size="sm" onClick={back} className="px-0">
+            <ArrowLeft className="size-6" />
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Delete session"
+                className="px-0 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="size-6" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently removes the session on{" "}
+                  {fmtDate(selected.date)} and its {rows.length}{" "}
+                  {rows.length === 1 ? "attendance" : "attendances"}. This
+                  can&rsquo;t be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={deleteSession}
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+
+      {/* Extra top padding clears the fixed back bar above. */}
       <PageHeader
         title={fmtDate(selected.date)}
-        leading={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={back}
-            className="-ml-2 text-muted-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            All sessions
-          </Button>
-        }
+        className="pt-8"
         actions={
           <Badge
             variant={outstanding > 0 ? "destructive" : "secondary"}
