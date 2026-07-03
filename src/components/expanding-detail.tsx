@@ -49,7 +49,9 @@ export function ExpandTrigger({
 }) {
   const leaving = nudge.id === layoutId;
   return (
-    <div className="relative">
+    // `layout="position"` animates the whole row (border + text) together when
+    // the list reorders/filters, instead of only the surface sliding.
+    <motion.div layout="position" className="relative">
       <motion.div
         layoutId={`expand-${layoutId}`}
         // While opening, this surface is the shared element Framer may animate;
@@ -86,7 +88,7 @@ export function ExpandTrigger({
       >
         {children}
       </button>
-    </div>
+    </motion.div>
   );
 }
 
