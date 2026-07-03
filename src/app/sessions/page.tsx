@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowUpRight,
   ChevronRight,
+  EllipsisVertical,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -35,8 +36,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Item,
   ItemGroup,
@@ -133,6 +140,7 @@ export default function SessionsPage() {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [loadingRows, setLoadingRows] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function loadSessions(silent = false) {
     if (!silent) setLoading(true);
@@ -275,78 +283,86 @@ export default function SessionsPage() {
 
   return (
     <div className="space-y-4">
-      {/* Back and delete pinned to the very top of the viewport. */}
+      {/* Back on the left; secondary actions in an overflow menu on the right. */}
       <div className="fixed inset-x-0 top-0 z-30">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 pt-3 pb-2">
           <Button variant="ghost" size="sm" onClick={back} className="px-0">
             <ArrowLeft className="size-6" />
           </Button>
 
-          <div className="flex items-center gap-2">
-            <Drawer open={editOpen} onOpenChange={setEditOpen}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                aria-label="Edit session"
-                onClick={() => setEditOpen(true)}
+                aria-label="Session actions"
                 className="px-0"
               >
-                <Pencil className="size-6" />
+                <EllipsisVertical className="size-6" />
               </Button>
-              <DrawerContent className="h-[85vh]">
-                <DrawerHeader className="text-left shrink-0">
-                  <DrawerTitle>Edit session</DrawerTitle>
-                </DrawerHeader>
-                <div className="min-h-0 flex-1 px-4 pb-8">
-                  <NewSessionForm
-                    fill
-                    session={{
-                      id: selected.id,
-                      date: toDateInput(selected.date),
-                      rate: selected.rate,
-                      playerIds: rows.map((r) => r.playerId),
-                    }}
-                    onSuccess={afterEdit}
-                  />
-                </div>
-              </DrawerContent>
-            </Drawer>
-
-            <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Delete session"
-                className="px-0 text-muted-foreground hover:text-destructive"
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                <Pencil className="size-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={() => setConfirmOpen(true)}
+                className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="size-6" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete this session?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This permanently removes the session on{" "}
-                  {fmtDate(selected.date)} and its {rows.length}{" "}
-                  {rows.length === 1 ? "attendance" : "attendances"}. This
-                  can&rsquo;t be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={deleteSession}
-                  className="bg-destructive text-white hover:bg-destructive/90"
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-            </AlertDialog>
-          </div>
+                <Trash2 className="size-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Edit drawer, opened from the overflow menu. */}
+      <Drawer open={editOpen} onOpenChange={setEditOpen}>
+        <DrawerContent className="h-[85vh]">
+          <DrawerHeader className="text-left shrink-0">
+            <DrawerTitle>Edit session</DrawerTitle>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 px-4 pb-8">
+            <NewSessionForm
+              fill
+              session={{
+                id: selected.id,
+                date: toDateInput(selected.date),
+                rate: selected.rate,
+                playerIds: rows.map((r) => r.playerId),
+              }}
+              onSuccess={afterEdit}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Delete confirmation, opened from the overflow menu. */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the session on {fmtDate(selected.date)}{" "}
+              and its {rows.length}{" "}
+              {rows.length === 1 ? "attendance" : "attendances"}. This
+              can&rsquo;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deleteSession}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Extra top padding clears the fixed back bar above. */}
       <PageHeader
