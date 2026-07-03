@@ -18,6 +18,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({
@@ -38,7 +39,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="flex-1 w-full max-w-2xl mx-auto px-4 pb-24 pt-4">
+          <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
             {children}
           </main>
           <AppNav />
