@@ -80,7 +80,7 @@ body {
   --chart-3: oklch(72.53% 0.17 338.6deg);             /* secondary (pink) */
   --chart-4: oklch(62.41% 0.18 140.43deg);            /* success (green) */
   --chart-5: oklch(71.4% 0.15 67.88deg);              /* warning (amber) */
-  --radius: 0.375rem;                                 /* radius-base */
+  --radius: 0.625rem;                                 /* radius-base (10px) */
   --sidebar: oklch(96% 0.006 280deg);
   --sidebar-foreground: oklch(33.48% 0.03 281.97deg);
   --sidebar-primary: oklch(66.25% 0.18 273.14deg);
