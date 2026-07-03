@@ -141,7 +141,7 @@ export function ExpandOverlay({
             }}
             className="fixed inset-0 z-50 overflow-y-auto"
           >
-            <div className="mx-auto max-w-2xl space-y-4 px-4 pb-16">
+            <div className="mx-auto max-w-2xl space-y-4 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               {children}
             </div>
           </motion.div>
