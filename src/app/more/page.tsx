@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { Moon, Sun, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/page-header";
 
 export default function MorePage() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function MorePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">More</h1>
+      <PageHeader title="More" />
 
       {/* Icon + label swap purely via the `.dark` class to avoid hydration
           mismatch (next-themes sets the class before paint). */}

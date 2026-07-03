@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { formatCents } from "@/lib/money";
 import { useDataRefresh } from "@/hooks/use-data-refresh";
+import { PageHeader } from "@/components/page-header";
 import {
   Card,
   CardDescription,
@@ -92,7 +93,7 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold">Overview</h1>
+      <PageHeader title="Overview" />
 
       <div className="grid grid-cols-2 gap-3">
         <Card>

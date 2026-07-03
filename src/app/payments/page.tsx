@@ -7,6 +7,7 @@ import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { useDataRefresh } from "@/hooks/use-data-refresh";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -138,7 +139,7 @@ export default function PaymentsPage() {
   if (!selectedPlayer) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-bold">Payments</h1>
+        <PageHeader title="Payments" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -173,24 +174,28 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setSelectedPlayer(null)}
-        className="-ml-2 text-muted-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        All players
-      </Button>
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">{selectedPlayer.name}</h1>
-        <Badge
-          variant={outstanding > 0 ? "destructive" : "secondary"}
-          className="text-sm"
-        >
-          {formatCents(outstanding)} due
-        </Badge>
-      </div>
+      <PageHeader
+        title={selectedPlayer.name}
+        leading={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedPlayer(null)}
+            className="-ml-2 text-muted-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            All players
+          </Button>
+        }
+        actions={
+          <Badge
+            variant={outstanding > 0 ? "destructive" : "secondary"}
+            className="text-sm"
+          >
+            {formatCents(outstanding)} due
+          </Badge>
+        }
+      />
 
       {loadingRows ? (
         <div className="flex justify-center py-16">

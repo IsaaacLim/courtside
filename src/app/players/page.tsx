@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Player } from "@/db/schema";
 import { useDataRefresh } from "@/hooks/use-data-refresh";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
@@ -148,7 +149,7 @@ export default function PlayersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Players</h1>
+      <PageHeader title="Players" />
 
       <form onSubmit={addPlayer} className="flex gap-2">
         <Input

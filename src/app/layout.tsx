@@ -40,7 +40,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+          <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-24 pb-[calc(6rem+env(safe-area-inset-bottom))]">
             {children}
           </main>
           <NewSessionFab />

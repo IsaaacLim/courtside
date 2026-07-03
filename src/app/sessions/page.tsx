@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowUpRight, ChevronRight } from "lucide-react";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { useDataRefresh } from "@/hooks/use-data-refresh";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -179,7 +180,7 @@ export default function SessionsPage() {
     const archived = sessions.filter((s) => s.unpaid === 0);
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-bold">Sessions</h1>
+        <PageHeader title="Sessions" />
 
         {loading ? (
           <div className="flex justify-center py-16">
@@ -215,21 +216,28 @@ export default function SessionsPage() {
 
   return (
     <div className="space-y-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={back}
-        className="-ml-2 text-muted-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        All sessions
-      </Button>
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">{fmtDate(selected.date)}</h1>
-        <Badge variant={outstanding > 0 ? "destructive" : "secondary"} className="text-sm">
-          {formatCents(outstanding)} due
-        </Badge>
-      </div>
+      <PageHeader
+        title={fmtDate(selected.date)}
+        leading={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={back}
+            className="-ml-2 text-muted-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            All sessions
+          </Button>
+        }
+        actions={
+          <Badge
+            variant={outstanding > 0 ? "destructive" : "secondary"}
+            className="text-sm"
+          >
+            {formatCents(outstanding)} due
+          </Badge>
+        }
+      />
 
       {loadingRows ? (
         <div className="flex justify-center py-16">
