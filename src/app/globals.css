@@ -57,7 +57,7 @@ body {
    indigo primary, calm lavender-gray surfaces (secondary/muted/accent stay
    neutral). Each value notes the source ramp step. */
 :root {
-  --background: oklch(96% 0.006 280deg);              /* lightened surface */
+  --background: oklch(98.51% 0 0deg);                 /* #fafafa */
   --foreground: oklch(33.48% 0.03 281.97deg);         /* surface-900 */
   --card: oklch(100% 0 0deg);                         /* body background (white) */
   --card-foreground: oklch(33.48% 0.03 281.97deg);    /* surface-900 */
