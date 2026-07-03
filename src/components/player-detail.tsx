@@ -7,6 +7,13 @@ import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { notifyDataChanged, useDataRefresh } from "@/hooks/use-data-refresh";
 import { ExpandBackBar } from "@/components/expanding-detail";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +119,11 @@ export function PlayerDetail({
   const paid = rows.filter((r) => r.paid);
   const allSelected = unpaid.length > 0 && unpaid.every((r) => checked.has(r.id));
   const outstanding = unpaid.reduce((sum, r) => sum + r.amountDue, 0);
+  // Earliest / latest due dates among the unpaid sessions (ISO strings sort
+  // chronologically).
+  const dueDates = unpaid.map((r) => r.date).sort();
+  const earliestDue = dueDates[0];
+  const latestDue = dueDates[dueDates.length - 1];
   const checkedTotal = unpaid
     .filter((r) => checked.has(r.id))
     .reduce((sum, r) => sum + r.amountDue, 0);
@@ -120,15 +132,35 @@ export function PlayerDetail({
     <>
       <ExpandBackBar onBack={onBack} />
 
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-2xl font-bold">{player.name}</span>
-        <Badge
-          variant={outstanding > 0 ? "destructive" : "secondary"}
-          className="text-sm"
-        >
-          {formatCents(outstanding)} due
-        </Badge>
-      </div>
+      <h1 className="text-2xl font-bold">{player.name}</h1>
+
+      <Card>
+        <CardHeader>
+          <CardDescription>Outstanding</CardDescription>
+          <CardTitle
+            className={cn(
+              "text-4xl font-bold tabular-nums",
+              outstanding > 0
+                ? "text-red-600 dark:text-red-400"
+                : "text-muted-foreground",
+            )}
+          >
+            {formatCents(outstanding)}
+          </CardTitle>
+        </CardHeader>
+        {unpaid.length > 0 && (
+          <CardContent className="flex items-center justify-between text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground">Earliest due</div>
+              <div className="font-medium">{fmtDate(earliestDue)}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-muted-foreground">Latest due</div>
+              <div className="font-medium">{fmtDate(latestDue)}</div>
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
       {loadingRows ? (
         <div className="flex justify-center py-16">
