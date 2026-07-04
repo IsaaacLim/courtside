@@ -101,24 +101,8 @@ export default function OverviewPage() {
 
   useDataRefresh(load);
 
-  if (loading)
-    return (
-      <div className="flex justify-center py-16">
-        <Spinner className="size-6" />
-      </div>
-    );
-  if (!data)
-    return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>Could not load overview</EmptyTitle>
-          <EmptyDescription>Check your connection and retry.</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    );
-
   const q = search.trim().toLowerCase();
-  const allOwing = data.playerBalances.filter((p) => p.owed > 0);
+  const allOwing = (data?.playerBalances ?? []).filter((p) => p.owed > 0);
   const owing = allOwing
     .filter((p) => p.name.toLowerCase().includes(q))
     .sort((a, b) => {
@@ -139,7 +123,22 @@ export default function OverviewPage() {
       <div className="space-y-6">
         <PageHeader title="Overview" />
 
-      <div className="grid grid-cols-2 gap-3">
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Spinner className="size-6" />
+          </div>
+        ) : !data ? (
+          <Empty className="border rounded-xl py-10">
+            <EmptyHeader>
+              <EmptyTitle>Could not load overview</EmptyTitle>
+              <EmptyDescription>
+                Check your connection and retry.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardHeader>
             <CardDescription>Outstanding</CardDescription>
@@ -239,6 +238,8 @@ export default function OverviewPage() {
           </ItemGroup>
         )}
       </section>
+          </>
+        )}
       </div>
 
       <ExpandOverlay
