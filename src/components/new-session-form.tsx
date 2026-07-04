@@ -89,7 +89,8 @@ export function NewSessionForm({
       fetch("/api/sessions/last-rate")
         .then((r) => r.json())
         .then((d) => {
-          if (typeof d.rate === "number") setRate((d.rate / 100).toString());
+          // Prefill with the last session's rate, or fall back to $10.
+          setRate(typeof d.rate === "number" ? (d.rate / 100).toString() : "10");
         });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
