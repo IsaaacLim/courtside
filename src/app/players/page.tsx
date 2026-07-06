@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Info } from "lucide-react";
+import { toast } from "sonner";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
 import { useDataRefresh, notifyDataChanged } from "@/hooks/use-data-refresh";
@@ -130,6 +131,7 @@ export default function PlayersPage() {
     });
     notifyDataChanged(); // overview hides/shows this player
     load();
+    toast.success(active ? `${p.name} reactivated` : `${p.name} deactivated`);
   }
 
   function toggleActive(p: PlayerRow) {
