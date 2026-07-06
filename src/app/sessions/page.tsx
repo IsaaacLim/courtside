@@ -72,6 +72,7 @@ type SessionAttendance = {
   id: number;
   playerId: number;
   playerName: string;
+  playerActive: boolean;
   amountDue: number;
   paid: boolean;
   paidAt: string | null;
@@ -397,17 +398,26 @@ export default function SessionsPage() {
                             />
                             <ItemContent>
                               <ItemTitle>
-                                <Link
-                                  href={`/?playerId=${r.playerId}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 hover:underline underline-offset-4"
-                                >
-                                  {r.playerName}
-                                  <ArrowUpRight
-                                    className="size-3.5 text-muted-foreground/50"
-                                    aria-hidden
-                                  />
-                                </Link>
+                                {r.playerActive ? (
+                                  <Link
+                                    href={`/?playerId=${r.playerId}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                                  >
+                                    {r.playerName}
+                                    <ArrowUpRight
+                                      className="size-3.5 text-muted-foreground/50"
+                                      aria-hidden
+                                    />
+                                  </Link>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {r.playerName}
+                                    <Badge variant="secondary" className="text-[10px]">
+                                      Inactive
+                                    </Badge>
+                                  </span>
+                                )}
                               </ItemTitle>
                               <ItemDescription>
                                 {formatCents(r.amountDue)}
@@ -453,16 +463,25 @@ export default function SessionsPage() {
                         <Item key={r.id} variant="muted" className="bg-raised">
                           <ItemContent>
                             <ItemTitle className="text-muted-foreground">
-                              <Link
-                                href={`/?playerId=${r.playerId}`}
-                                className="inline-flex items-center gap-1 hover:underline underline-offset-4"
-                              >
-                                {r.playerName}
-                                <ArrowUpRight
-                                  className="size-3.5 text-muted-foreground/50"
-                                  aria-hidden
-                                />
-                              </Link>
+                              {r.playerActive ? (
+                                <Link
+                                  href={`/?playerId=${r.playerId}`}
+                                  className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                                >
+                                  {r.playerName}
+                                  <ArrowUpRight
+                                    className="size-3.5 text-muted-foreground/50"
+                                    aria-hidden
+                                  />
+                                </Link>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5">
+                                  {r.playerName}
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    Inactive
+                                  </Badge>
+                                </span>
+                              )}
                             </ItemTitle>
                             <ItemDescription>
                               {formatCents(r.amountDue)}

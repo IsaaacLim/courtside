@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Info } from "lucide-react";
 import type { Player } from "@/db/schema";
-import { useDataRefresh } from "@/hooks/use-data-refresh";
+import { formatCents } from "@/lib/money";
+import { useDataRefresh, notifyDataChanged } from "@/hooks/use-data-refresh";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -44,11 +46,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+type PlayerRow = Player & { owed: number };
+
 export default function PlayersPage() {
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [includeInactive, setIncludeInactive] = useState(false);
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
+  // Player pending deactivation while they still owe (warning dialog).
+  const [deactivateTarget, setDeactivateTarget] = useState<PlayerRow | null>(
+    null,
+  );
 
   // Rename dialog state.
   const [renameTarget, setRenameTarget] = useState<Player | null>(null);
@@ -114,13 +122,28 @@ export default function PlayersPage() {
     load();
   }
 
-  async function toggleActive(p: Player) {
+  async function applyActive(p: PlayerRow, active: boolean) {
     await fetch(`/api/players/${p.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ active: !p.active }),
+      body: JSON.stringify({ active }),
     });
+    notifyDataChanged(); // overview hides/shows this player
     load();
+  }
+
+  function toggleActive(p: PlayerRow) {
+    // Warn before deactivating someone who still owes.
+    if (p.active && p.owed > 0) {
+      setDeactivateTarget(p);
+      return;
+    }
+    applyActive(p, !p.active);
+  }
+
+  function confirmDeactivate() {
+    if (deactivateTarget) applyActive(deactivateTarget, false);
+    setDeactivateTarget(null);
   }
 
   const mergeTarget =
@@ -335,6 +358,43 @@ export default function PlayersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Deactivate warning when the player still owes */}
+      <Dialog
+        open={deactivateTarget !== null}
+        onOpenChange={(o) => !o && setDeactivateTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {deactivateTarget?.name} still owes{" "}
+              {formatCents(deactivateTarget?.owed ?? 0)}
+            </DialogTitle>
+            <DialogDescription>
+              Deactivating removes them from the overview — including the{" "}
+              {formatCents(deactivateTarget?.owed ?? 0)} they still owe. Please
+              settle this before moving forward.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-start gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            <Info className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              You can reactivate them anytime to bring them (and their balance)
+              back.
+            </span>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={confirmDeactivate}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Deactivate anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, like, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { players } from "@/db/schema";
+import { attendances, players } from "@/db/schema";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -18,7 +18,25 @@ export async function GET(req: Request) {
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(players.name);
 
-  return NextResponse.json({ players: rows });
+  // Outstanding balance (sum of unpaid dues) per player.
+  const owedRows = await db
+    .select({
+      playerId: attendances.playerId,
+      owed: sql<number>`sum(${attendances.amountDue})`,
+    })
+    .from(attendances)
+    .where(eq(attendances.paid, false))
+    .groupBy(attendances.playerId);
+  const owedByPlayer = new Map(
+    owedRows.map((r) => [r.playerId, Number(r.owed) || 0]),
+  );
+
+  const withOwed = rows.map((p) => ({
+    ...p,
+    owed: owedByPlayer.get(p.id) ?? 0,
+  }));
+
+  return NextResponse.json({ players: withOwed });
 }
 
 export async function POST(req: Request) {

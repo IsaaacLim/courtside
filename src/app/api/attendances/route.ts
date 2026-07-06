@@ -26,6 +26,7 @@ export async function GET(req: Request) {
         id: attendances.id,
         playerId: attendances.playerId,
         playerName: players.name,
+        playerActive: players.active,
         amountDue: attendances.amountDue,
         paid: attendances.paid,
         paidAt: attendances.paidAt,
