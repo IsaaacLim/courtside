@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Info } from "lucide-react";
 import { toast } from "sonner";
-import useSWR, { mutate } from "swr";
+import { mutate } from "swr";
+import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -52,7 +53,7 @@ type PlayerRow = Player & { owed: number };
 export default function PlayersPage() {
   const [includeInactive, setIncludeInactive] = useState(false);
   const key = `/api/players?includeInactive=${includeInactive ? "1" : "0"}`;
-  const { data, isLoading } = useSWR<{ players: PlayerRow[] }>(key);
+  const { data, isLoading } = useTrackedSWR<{ players: PlayerRow[] }>(key);
   const players = data?.players ?? [];
   const [newName, setNewName] = useState("");
   // Player pending deactivation while they still owe (warning dialog).

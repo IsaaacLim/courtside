@@ -12,7 +12,8 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import useSWR, { mutate } from "swr";
+import { mutate } from "swr";
+import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
@@ -150,7 +151,7 @@ function SessionList({
 const SESSIONS_KEY = "/api/sessions";
 
 export default function SessionsPage() {
-  const { data: sessionsData, isLoading: loading } = useSWR<{
+  const { data: sessionsData, isLoading: loading } = useTrackedSWR<{
     sessions: SessionSummary[];
   }>(SESSIONS_KEY);
   const sessions = sessionsData?.sessions ?? [];
@@ -158,7 +159,7 @@ export default function SessionsPage() {
   const attendancesKey = selected
     ? `/api/attendances?sessionId=${selected.id}`
     : null;
-  const { data: rowsData, isLoading: loadingRows } = useSWR<{
+  const { data: rowsData, isLoading: loadingRows } = useTrackedSWR<{
     attendances: SessionAttendance[];
   }>(attendancesKey);
   const rows = rowsData?.attendances ?? [];

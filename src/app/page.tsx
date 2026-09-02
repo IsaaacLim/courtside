@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import useSWR, { mutate } from "swr";
+import { mutate } from "swr";
+import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { ChevronRight, Filter, Search } from "lucide-react";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -62,7 +63,7 @@ type Overview = {
 const OVERVIEW_KEY = "/api/overview";
 
 export default function OverviewPage() {
-  const { data, error, isLoading } = useSWR<Overview>(OVERVIEW_KEY);
+  const { data, error, isLoading } = useTrackedSWR<Overview>(OVERVIEW_KEY);
   const [selectedPlayer, setSelectedPlayer] = useState<{
     id: number;
     name: string;

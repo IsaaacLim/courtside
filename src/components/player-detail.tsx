@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, EllipsisVertical, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import useSWR, { mutate } from "swr";
+import { mutate } from "swr";
+import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { ExpandBackBar } from "@/components/expanding-detail";
@@ -73,7 +74,7 @@ export function PlayerDetail({
   onBack: () => void;
 }) {
   const key = `/api/attendances?playerId=${player.id}`;
-  const { data, isLoading: loadingRows } = useSWR<{
+  const { data, isLoading: loadingRows } = useTrackedSWR<{
     attendances: AttendanceRow[];
   }>(key);
   const rows = data?.attendances ?? [];

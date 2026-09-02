@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
-import useSWR, { mutate } from "swr";
+import { mutate } from "swr";
+import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import type { Player } from "@/db/schema";
 import { formatCents, parseDollarsToCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -63,7 +64,9 @@ export function NewSessionForm({
   const router = useRouter();
   const editing = session != null;
   const PLAYERS_KEY = "/api/players";
-  const { data: playersData } = useSWR<{ players: Player[] }>(PLAYERS_KEY);
+  const { data: playersData } = useTrackedSWR<{ players: Player[] }>(
+    PLAYERS_KEY,
+  );
   const players = useMemo(() => playersData?.players ?? [], [playersData]);
   const [selected, setSelected] = useState<Set<number>>(
     () => new Set(session?.playerIds ?? []),
