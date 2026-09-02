@@ -5,6 +5,7 @@ import { Info } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
+import { useScrollRestoration } from "@/lib/use-scroll-restoration";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -51,6 +52,7 @@ import {
 type PlayerRow = Player & { owed: number };
 
 export default function PlayersPage() {
+  useScrollRestoration();
   const [includeInactive, setIncludeInactive] = useState(false);
   const key = `/api/players?includeInactive=${includeInactive ? "1" : "0"}`;
   const { data, isLoading } = useTrackedSWR<{ players: PlayerRow[] }>(key);

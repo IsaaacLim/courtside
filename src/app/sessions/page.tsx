@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
+import { useScrollRestoration } from "@/lib/use-scroll-restoration";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
@@ -151,6 +152,7 @@ function SessionList({
 const SESSIONS_KEY = "/api/sessions";
 
 export default function SessionsPage() {
+  useScrollRestoration();
   const { data: sessionsData, isLoading: loading } = useTrackedSWR<{
     sessions: SessionSummary[];
   }>(SESSIONS_KEY);
