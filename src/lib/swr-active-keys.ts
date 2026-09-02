@@ -17,6 +17,6 @@ export function markKeyInactive(key: string | null | undefined) {
   else counts.set(key, next);
 }
 
-export function isKeyActive(key: string): boolean {
-  return counts.has(key);
+export function getActiveKeys(): Set<string> {
+  return new Set(counts.keys());
 }
