@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import useSWR, { mutate } from "swr";
 import { ChevronRight, Filter, Search } from "lucide-react";
 import { formatCents } from "@/lib/money";
-import { useDataRefresh } from "@/hooks/use-data-refresh";
 import { PageHeader } from "@/components/page-header";
 import { PlayerDetail } from "@/components/player-detail";
 import {
@@ -59,9 +59,10 @@ type Overview = {
   }[];
 };
 
+const OVERVIEW_KEY = "/api/overview";
+
 export default function OverviewPage() {
-  const [data, setData] = useState<Overview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, error, isLoading } = useSWR<Overview>(OVERVIEW_KEY);
   const [selectedPlayer, setSelectedPlayer] = useState<{
     id: number;
     name: string;
@@ -72,34 +73,27 @@ export default function OverviewPage() {
     "name-asc" | "name-desc" | "owed-desc" | "owed-asc"
   >("name-asc");
 
-  async function load() {
-    const d: Overview = await fetch("/api/overview").then((r) => r.json());
-    setData(d);
-    setLoading(false);
-    return d;
-  }
-
   function back() {
     setSelectedPlayer(null);
     reset();
-    load(); // refresh balances after any mark-paid in the detail
+    mutate(OVERVIEW_KEY); // refresh balances after any mark-paid in the detail
   }
 
+  // Deep link (e.g. from a session's player link): /?playerId=<id>. Only
+  // acted on once, so re-opening the same page doesn't keep re-triggering it.
+  const deepLinkHandled = useRef(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load().then((d) => {
-      // Deep link (e.g. from a session's player link): /?playerId=<id>
-      const pid = Number(
-        new URLSearchParams(window.location.search).get("playerId"),
-      );
-      if (Number.isInteger(pid)) {
-        const p = d.playerBalances.find((x) => x.playerId === pid);
-        if (p) setSelectedPlayer({ id: p.playerId, name: p.name });
-      }
-    });
-  }, []);
-
-  useDataRefresh(load);
+    if (!data || deepLinkHandled.current) return;
+    deepLinkHandled.current = true;
+    const pid = Number(
+      new URLSearchParams(window.location.search).get("playerId"),
+    );
+    if (Number.isInteger(pid)) {
+      const p = data.playerBalances.find((x) => x.playerId === pid);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (p) setSelectedPlayer({ id: p.playerId, name: p.name });
+    }
+  }, [data]);
 
   const q = search.trim().toLowerCase();
   const allOwing = (data?.playerBalances ?? []).filter((p) => p.owed > 0);
@@ -123,11 +117,11 @@ export default function OverviewPage() {
       <div className="space-y-6">
         <PageHeader title="Overview" />
 
-        {loading ? (
+        {isLoading ? (
           <div className="flex justify-center py-16">
             <Spinner className="size-6" />
           </div>
-        ) : !data ? (
+        ) : !data || error ? (
           <Empty className="border rounded-xl py-10">
             <EmptyHeader>
               <EmptyTitle>Could not load overview</EmptyTitle>

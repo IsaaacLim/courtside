@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -12,9 +12,9 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import useSWR, { mutate } from "swr";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { useDataRefresh, notifyDataChanged } from "@/hooks/use-data-refresh";
 import { PageHeader } from "@/components/page-header";
 import { NewSessionForm } from "@/components/new-session-form";
 import {
@@ -147,55 +147,46 @@ function SessionList({
   );
 }
 
+const SESSIONS_KEY = "/api/sessions";
+
 export default function SessionsPage() {
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: sessionsData, isLoading: loading } = useSWR<{
+    sessions: SessionSummary[];
+  }>(SESSIONS_KEY);
+  const sessions = sessionsData?.sessions ?? [];
   const [selected, setSelected] = useState<SessionSummary | null>(null);
-  const [rows, setRows] = useState<SessionAttendance[]>([]);
+  const attendancesKey = selected
+    ? `/api/attendances?sessionId=${selected.id}`
+    : null;
+  const { data: rowsData, isLoading: loadingRows } = useSWR<{
+    attendances: SessionAttendance[];
+  }>(attendancesKey);
+  const rows = rowsData?.attendances ?? [];
   const [checked, setChecked] = useState<Set<number>>(new Set());
-  const [loadingRows, setLoadingRows] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { nudge, requestOpen, reset } = useExpandNudge();
 
-  async function loadSessions(silent = false) {
-    if (!silent) setLoading(true);
-    const res = await fetch("/api/sessions");
-    const data = await res.json();
-    const list: SessionSummary[] = data.sessions ?? [];
-    setSessions(list);
-    setLoading(false);
-    return list;
-  }
-
-  // Refetch quietly when a session is created from the global drawer.
-  useDataRefresh(() => {
-    loadSessions(true);
-  });
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadSessions().then((list) => {
-      // Deep link from a player's session link: /sessions?sessionId=<id>
-      const sid = Number(
-        new URLSearchParams(window.location.search).get("sessionId"),
-      );
-      if (Number.isInteger(sid)) {
-        const s = list.find((x) => x.id === sid);
-        if (s) openSession(s);
-      }
-    });
-  }, []);
-
-  async function openSession(s: SessionSummary) {
+  function openSession(s: SessionSummary) {
     setSelected(s);
     setChecked(new Set());
-    setLoadingRows(true);
-    const res = await fetch(`/api/attendances?sessionId=${s.id}`);
-    const data = await res.json();
-    setRows(data.attendances ?? []);
-    setLoadingRows(false);
   }
+
+  // Deep link from a player's session link: /sessions?sessionId=<id>. Only
+  // acted on once, so re-opening the page doesn't keep re-triggering it.
+  const deepLinkHandled = useRef(false);
+  useEffect(() => {
+    if (!sessionsData || deepLinkHandled.current) return;
+    deepLinkHandled.current = true;
+    const sid = Number(
+      new URLSearchParams(window.location.search).get("sessionId"),
+    );
+    if (Number.isInteger(sid)) {
+      const s = sessionsData.sessions.find((x) => x.id === sid);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (s) openSession(s);
+    }
+  }, [sessionsData]);
 
   // Nudge the tapped row's label toward the header, then expand the panel.
   function openTrigger(s: SessionSummary, y: number) {
@@ -205,17 +196,20 @@ export default function SessionsPage() {
   function back() {
     setSelected(null);
     reset(); // let the row's label ease back in
-    // Silent refetch so the list stays mounted for the card to shrink back into.
-    loadSessions(true);
+    // Refresh unpaid counts in case anything changed while in the detail.
+    mutate(SESSIONS_KEY);
   }
 
   // After a successful edit: close the drawer and refetch the updated session.
   async function afterEdit() {
     setEditOpen(false);
     const id = selected?.id;
-    const list = await loadSessions(true);
-    const updated = list.find((s) => s.id === id);
-    if (updated) openSession(updated); // re-pulls the summary + attendance rows
+    const result = await mutate<{ sessions: SessionSummary[] }>(
+      SESSIONS_KEY,
+    );
+    const updated = result?.sessions.find((s) => s.id === id);
+    if (updated) setSelected(updated);
+    if (id) mutate(`/api/attendances?sessionId=${id}`);
     toast.success("Session updated");
   }
 
@@ -226,7 +220,7 @@ export default function SessionsPage() {
       method: "DELETE",
     });
     if (res.ok) {
-      notifyDataChanged();
+      mutate("/api/overview");
       back(); // returns to the list and refetches
       toast.success(`Session on ${label} removed`);
     } else {
@@ -235,6 +229,9 @@ export default function SessionsPage() {
   }
 
   async function setPaid(ids: number[], paid: boolean) {
+    const affectedPlayerIds = new Set(
+      rows.filter((r) => ids.includes(r.id)).map((r) => r.playerId),
+    );
     await Promise.all(
       ids.map((id) =>
         fetch(`/api/attendances/${id}`, {
@@ -244,14 +241,27 @@ export default function SessionsPage() {
         }),
       ),
     );
-    setRows((prev) =>
-      prev.map((r) =>
-        ids.includes(r.id)
-          ? { ...r, paid, paidAt: paid ? new Date().toISOString() : null }
-          : r,
-      ),
+    mutate(
+      attendancesKey,
+      (curr: { attendances: SessionAttendance[] } | undefined) =>
+        curr && {
+          attendances: curr.attendances.map((r) =>
+            ids.includes(r.id)
+              ? { ...r, paid, paidAt: paid ? new Date().toISOString() : null }
+              : r,
+          ),
+        },
+      { revalidate: false },
     );
     setChecked(new Set());
+    // Instant same-tab refresh of Overview/Players balances and the list's
+    // unpaid badge — this is also what makes mark-paid-from-Sessions
+    // consistent with mark-paid-from-player-detail (previously it wasn't).
+    mutate("/api/overview");
+    mutate(SESSIONS_KEY);
+    for (const pid of affectedPlayerIds) {
+      mutate(`/api/attendances?playerId=${pid}`);
+    }
   }
 
   function toggleCheck(id: number) {

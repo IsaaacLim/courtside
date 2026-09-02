@@ -6,6 +6,8 @@ import { AppNav } from "@/components/app-nav";
 import { NewSessionFab } from "@/components/new-session-fab";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { SwrProvider } from "@/components/swr-provider";
+import { DataVersionWatcher } from "@/components/data-version-watcher";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,11 +45,14 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <MotionConfig reducedMotion="user">
-            <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-24 pb-[calc(6rem+env(safe-area-inset-bottom))]">
-              {children}
-            </main>
-            <NewSessionFab />
-            <AppNav />
+            <SwrProvider>
+              <DataVersionWatcher />
+              <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-24 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+                {children}
+              </main>
+              <NewSessionFab />
+              <AppNav />
+            </SwrProvider>
             <Toaster position="top-center" />
           </MotionConfig>
         </ThemeProvider>

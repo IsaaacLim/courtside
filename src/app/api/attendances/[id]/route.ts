@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { attendances } from "@/db/schema";
+import { bumpVersion } from "@/db/version";
 
 // PATCH /api/attendances/:id  body: { paid: boolean, method?: string|null }
 export async function PATCH(
@@ -42,5 +43,6 @@ export async function PATCH(
   if (!row) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
+  await bumpVersion();
   return NextResponse.json({ attendance: row });
 }

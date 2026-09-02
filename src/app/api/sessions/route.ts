@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { attendances, sessions } from "@/db/schema";
+import { bumpVersion } from "@/db/version";
 
 // GET /api/sessions — session summaries, newest first.
 export async function GET() {
@@ -90,5 +91,6 @@ export async function POST(req: Request) {
     })),
   );
 
+  await bumpVersion();
   return NextResponse.json({ session }, { status: 201 });
 }

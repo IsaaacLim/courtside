@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Info } from "lucide-react";
 import { toast } from "sonner";
+import useSWR, { mutate } from "swr";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
-import { useDataRefresh, notifyDataChanged } from "@/hooks/use-data-refresh";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -50,10 +50,11 @@ import {
 type PlayerRow = Player & { owed: number };
 
 export default function PlayersPage() {
-  const [players, setPlayers] = useState<PlayerRow[]>([]);
   const [includeInactive, setIncludeInactive] = useState(false);
+  const key = `/api/players?includeInactive=${includeInactive ? "1" : "0"}`;
+  const { data, isLoading } = useSWR<{ players: PlayerRow[] }>(key);
+  const players = data?.players ?? [];
   const [newName, setNewName] = useState("");
-  const [loading, setLoading] = useState(true);
   // Player pending deactivation while they still owe (warning dialog).
   const [deactivateTarget, setDeactivateTarget] = useState<PlayerRow | null>(
     null,
@@ -68,27 +69,6 @@ export default function PlayersPage() {
   const [mergeTargetId, setMergeTargetId] = useState("");
   const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
 
-  async function load(silent = false) {
-    if (!silent) setLoading(true);
-    const res = await fetch(
-      `/api/players?includeInactive=${includeInactive ? "1" : "0"}`,
-    );
-    const data = await res.json();
-    setPlayers(data.players ?? []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeInactive]);
-
-  // Refetch quietly when players/sessions change from the global drawer.
-  useDataRefresh(() => {
-    load(true);
-  });
-
   async function addPlayer(e: React.FormEvent) {
     e.preventDefault();
     const name = newName.trim();
@@ -99,7 +79,7 @@ export default function PlayersPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    load();
+    mutate(key);
   }
 
   function openRename(p: Player) {
@@ -120,7 +100,9 @@ export default function PlayersPage() {
       body: JSON.stringify({ name }),
     });
     setRenameTarget(null);
-    load();
+    // Broadcast: the name shows up anywhere else it's cached (e.g. an
+    // open session's attendance list) without waiting for a navigation.
+    mutate(() => true);
   }
 
   async function applyActive(p: PlayerRow, active: boolean) {
@@ -129,8 +111,8 @@ export default function PlayersPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ active }),
     });
-    notifyDataChanged(); // overview hides/shows this player
-    load();
+    mutate(key);
+    mutate("/api/overview"); // overview hides/shows this player
     toast.success(active ? `${p.name} reactivated` : `${p.name} deactivated`);
   }
 
@@ -169,7 +151,7 @@ export default function PlayersPage() {
     setMergeConfirmOpen(false);
     setMergeSource(null);
     setMergeTargetId("");
-    load();
+    mutate(key);
   }
 
   return (
@@ -196,7 +178,7 @@ export default function PlayersPage() {
         Show inactive
       </Label>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex justify-center py-16">
           <Spinner className="size-6" />
         </div>

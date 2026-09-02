@@ -67,6 +67,16 @@ export const attendances = sqliteTable(
   ],
 );
 
+/**
+ * Single-row table tracking a monotonic version counter, bumped on every
+ * write across the app. Lets clients cheaply poll "has anything changed?"
+ * instead of re-running expensive queries to find out.
+ */
+export const appMeta = sqliteTable("app_meta", {
+  id: integer("id").primaryKey(),
+  version: integer("version").notNull().default(0),
+});
+
 export type Player = typeof players.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Attendance = typeof attendances.$inferSelect;

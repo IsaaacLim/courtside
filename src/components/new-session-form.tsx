@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
+import useSWR, { mutate } from "swr";
 import type { Player } from "@/db/schema";
 import { formatCents, parseDollarsToCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { notifyDataChanged } from "@/hooks/use-data-refresh";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -62,7 +62,9 @@ export function NewSessionForm({
 }) {
   const router = useRouter();
   const editing = session != null;
-  const [players, setPlayers] = useState<Player[]>([]);
+  const PLAYERS_KEY = "/api/players";
+  const { data: playersData } = useSWR<{ players: Player[] }>(PLAYERS_KEY);
+  const players = useMemo(() => playersData?.players ?? [], [playersData]);
   const [selected, setSelected] = useState<Set<number>>(
     () => new Set(session?.playerIds ?? []),
   );
@@ -75,15 +77,7 @@ export function NewSessionForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  async function loadPlayers() {
-    const res = await fetch("/api/players");
-    const data = await res.json();
-    setPlayers(data.players ?? []);
-  }
-
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadPlayers();
     // Prefill the rate from the last session only when creating a new one.
     if (!editing) {
       fetch("/api/sessions/last-rate")
@@ -121,8 +115,14 @@ export function NewSessionForm({
     });
     const data = await res.json();
     if (data.player) {
-      setPlayers((prev) =>
-        [...prev, data.player].sort((a, b) => a.name.localeCompare(b.name)),
+      mutate(
+        PLAYERS_KEY,
+        (curr: { players: Player[] } | undefined) => ({
+          players: [...(curr?.players ?? []), data.player].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
+        }),
+        { revalidate: false },
       );
       setSelected((prev) => new Set(prev).add(data.player.id));
       setSearch("");
@@ -156,7 +156,12 @@ export function NewSessionForm({
     );
     setSubmitting(false);
     if (res.ok) {
-      notifyDataChanged();
+      mutate("/api/overview");
+      mutate("/api/sessions");
+      for (const pid of selected) {
+        mutate(`/api/attendances?playerId=${pid}`);
+      }
+      if (editing) mutate(`/api/attendances?sessionId=${session!.id}`);
       router.refresh();
       if (onSuccess) onSuccess();
       else router.push("/");

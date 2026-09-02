@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, like, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { attendances, players } from "@/db/schema";
+import { bumpVersion } from "@/db/version";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -52,5 +53,6 @@ export async function POST(req: Request) {
   }
 
   const [row] = await db.insert(players).values({ name }).returning();
+  await bumpVersion();
   return NextResponse.json({ player: row }, { status: 201 });
 }

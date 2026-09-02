@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { attendances, sessions } from "@/db/schema";
+import { bumpVersion } from "@/db/version";
 
 // PATCH /api/sessions/:id  body: { date, rate, playerIds }
 export async function PATCH(
@@ -88,6 +89,7 @@ export async function PATCH(
     .set({ amountDue: rate })
     .where(eq(attendances.sessionId, id));
 
+  await bumpVersion();
   return NextResponse.json({ ok: true });
 }
 
@@ -112,5 +114,6 @@ export async function DELETE(
   if (!row) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
+  await bumpVersion();
   return NextResponse.json({ ok: true });
 }

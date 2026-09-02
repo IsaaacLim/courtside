@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, EllipsisVertical, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import useSWR, { mutate } from "swr";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { notifyDataChanged, useDataRefresh } from "@/hooks/use-data-refresh";
 import { ExpandBackBar } from "@/components/expanding-detail";
 import {
   Card,
@@ -72,41 +72,21 @@ export function PlayerDetail({
   player: { id: number; name: string };
   onBack: () => void;
 }) {
-  const [rows, setRows] = useState<AttendanceRow[]>([]);
+  const key = `/api/attendances?playerId=${player.id}`;
+  const { data, isLoading: loadingRows } = useSWR<{
+    attendances: AttendanceRow[];
+  }>(key);
+  const rows = data?.attendances ?? [];
   const [checked, setChecked] = useState<Set<number>>(new Set());
-  const [loadingRows, setLoadingRows] = useState(true);
   const [displayName, setDisplayName] = useState(player.name);
   const [editOpen, setEditOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    let active = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoadingRows(true);
-    setChecked(new Set());
-    setDisplayName(player.name); // resync when switching players
-    fetch(`/api/attendances?playerId=${player.id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!active) return;
-        setRows(data.attendances ?? []);
-        setLoadingRows(false);
-      });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player.id]);
-
-  // Refetch quietly when data changes elsewhere (e.g. a session is created).
-  useDataRefresh(() => {
-    fetch(`/api/attendances?playerId=${player.id}`)
-      .then((r) => r.json())
-      .then((data) => setRows(data.attendances ?? []));
-  });
-
   async function setPaid(ids: number[], paid: boolean) {
+    const affectedSessionIds = new Set(
+      rows.filter((r) => ids.includes(r.id)).map((r) => r.sessionId),
+    );
     await Promise.all(
       ids.map((id) =>
         fetch(`/api/attendances/${id}`, {
@@ -116,15 +96,25 @@ export function PlayerDetail({
         }),
       ),
     );
-    setRows((prev) =>
-      prev.map((r) =>
-        ids.includes(r.id)
-          ? { ...r, paid, paidAt: paid ? new Date().toISOString() : null }
-          : r,
-      ),
+    mutate(
+      key,
+      (curr: { attendances: AttendanceRow[] } | undefined) =>
+        curr && {
+          attendances: curr.attendances.map((r) =>
+            ids.includes(r.id)
+              ? { ...r, paid, paidAt: paid ? new Date().toISOString() : null }
+              : r,
+          ),
+        },
+      { revalidate: false },
     );
     setChecked(new Set());
-    notifyDataChanged(); // refresh Overview / Sessions balances
+    // Instant same-tab refresh of Overview/Sessions balances.
+    mutate("/api/overview");
+    mutate("/api/sessions");
+    for (const sid of affectedSessionIds) {
+      mutate(`/api/attendances?sessionId=${sid}`);
+    }
   }
 
   function toggleCheck(id: number) {
@@ -150,7 +140,9 @@ export function PlayerDetail({
     if (res.ok) {
       setDisplayName(name);
       setEditOpen(false);
-      notifyDataChanged(); // refresh player lists elsewhere
+      // Broadcast: refresh player lists and any open session's attendance
+      // rows elsewhere without waiting for a navigation.
+      mutate(() => true);
       toast.success(`Name changed to ${name}`);
     } else {
       toast.error("Could not change name");
