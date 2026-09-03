@@ -118,7 +118,7 @@ export default function SessionsPage() {
           <CenteredSpinner />
         ) : (
           <Tabs defaultValue="active">
-            <TabsList className="w-full">
+            <TabsList variant="pill" className="w-full">
               <TabsTrigger value="active">Active ({active.length})</TabsTrigger>
               <TabsTrigger value="archive">
                 Archive ({archived.length})
