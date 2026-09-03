@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     .select()
     .from(players)
     .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(players.name);
+    .orderBy(sql`${players.name} collate nocase`);
 
   // Outstanding balance (sum of unpaid dues) per player.
   const owedRows = await db
