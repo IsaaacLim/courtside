@@ -13,10 +13,12 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { NewSessionForm } from "@/components/new-session-form";
+import { useBackDismiss } from "@/lib/use-back-dismiss";
 
 export function NewSessionFab() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  useBackDismiss(open, () => setOpen(false));
 
   // No FAB on the login screen.
   if (pathname === "/login") return null;

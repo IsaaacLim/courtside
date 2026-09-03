@@ -1,6 +1,7 @@
 "use client";
 
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
+import { useBackDismiss } from "@/lib/use-back-dismiss";
 import { formatCents } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import {
@@ -40,6 +41,8 @@ export function SessionPreview({
   session: { id: number; date: string } | null;
   onOpenChange: (open: boolean) => void;
 }) {
+  useBackDismiss(!!session, () => onOpenChange(false));
+
   const key = session ? `/api/attendances?sessionId=${session.id}` : null;
   const { data, isLoading } = useTrackedSWR<{
     attendances: SessionAttendance[];

@@ -138,7 +138,11 @@ export default function SessionsPage() {
         )}
       </div>
 
-      <ExpandOverlay open={!!selected} layoutId={`session-${selected?.id}`}>
+      <ExpandOverlay
+        open={!!selected}
+        layoutId={`session-${selected?.id}`}
+        onDismiss={back}
+      >
         {selected && <SessionDetail session={selected} onBack={back} />}
       </ExpandOverlay>
     </>

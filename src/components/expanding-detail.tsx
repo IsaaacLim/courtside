@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useBackDismiss } from "@/lib/use-back-dismiss";
 import { cn } from "@/lib/utils";
 
 type ExpandId = string | number;
@@ -103,12 +104,17 @@ export function ExpandTrigger({
 export function ExpandOverlay({
   open,
   layoutId,
+  onDismiss,
   children,
 }: {
   open: boolean;
   layoutId: ExpandId;
+  /** Called when the back button/gesture should close this overlay. */
+  onDismiss: () => void;
   children: ReactNode;
 }) {
+  useBackDismiss(open, onDismiss);
+
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;

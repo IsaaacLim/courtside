@@ -1,6 +1,7 @@
 "use client";
 
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
+import { useBackDismiss } from "@/lib/use-back-dismiss";
 import { formatCents } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,8 @@ export function PlayerPreview({
   player: { id: number; name: string } | null;
   onOpenChange: (open: boolean) => void;
 }) {
+  useBackDismiss(!!player, () => onOpenChange(false));
+
   const key = player ? `/api/attendances?playerId=${player.id}` : null;
   const { data, isLoading } = useTrackedSWR<{ attendances: AttendanceRow[] }>(
     key,

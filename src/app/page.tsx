@@ -242,6 +242,7 @@ export default function OverviewPage() {
       <ExpandOverlay
         open={!!selectedPlayer}
         layoutId={`player-${selectedPlayer?.id}`}
+        onDismiss={back}
       >
         {selectedPlayer && (
           <PlayerDetail player={selectedPlayer} onBack={back} />
