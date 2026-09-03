@@ -48,6 +48,31 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Tailwind's default shadow scale is bottom-only (no light above an
+   element). Add a soft top-side layer to every step, on top of the
+   original bottom-heavy layer(s), so elevated surfaces read as "lit from
+   above" instead of looking bottom-lit. */
+@theme {
+  --shadow-2xs: 0 1px rgb(0 0 0 / 0.05), 0 -1px rgb(0 0 0 / 0.03);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 -1px 1px 0 rgb(0 0 0 / 0.03);
+  --shadow-sm:
+    0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1),
+    0 -1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1),
+    0 -1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md:
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1),
+    0 -2px 3px 0 rgb(0 0 0 / 0.05);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1),
+    0 -3px 5px 0 rgb(0 0 0 / 0.05);
+  --shadow-xl:
+    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1),
+    0 -4px 6px 0 rgb(0 0 0 / 0.06);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25), 0 -6px 10px 0 rgb(0 0 0 / 0.08);
+}
+
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
