@@ -31,9 +31,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { ListCard, ListRow, ListRowCheckbox } from "@/components/list-card";
+import {
+  AttendanceSectionHeader,
+  MarkPaidFloatingButton,
+  PaidAttendanceList,
+  UnpaidAttendanceList,
+} from "@/components/attendance-list";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 type AttendanceRow = {
@@ -223,30 +227,16 @@ export function PlayerDetail({
       ) : (
         <>
           <section className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-muted-foreground">
-                  Unpaid
-                </h2>
-                <Badge variant="secondary">{unpaid.length}</Badge>
-              </div>
-              {unpaid.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setChecked(
-                      allSelected
-                        ? new Set()
-                        : new Set(unpaid.map((r) => r.id)),
-                    )
-                  }
-                  className="-mr-2 text-muted-foreground"
-                >
-                  {allSelected ? "Deselect all" : "Select all"}
-                </Button>
-              )}
-            </div>
+            <AttendanceSectionHeader
+              label="Unpaid"
+              count={unpaid.length}
+              allSelected={allSelected}
+              onToggleSelectAll={() =>
+                setChecked(
+                  allSelected ? new Set() : new Set(unpaid.map((r) => r.id)),
+                )
+              }
+            />
             {unpaid.length === 0 ? (
               <Empty className="border rounded-xl py-8">
                 <EmptyHeader>
@@ -254,99 +244,47 @@ export function PlayerDetail({
                 </EmptyHeader>
               </Empty>
             ) : (
-              <ListCard>
-                {unpaid.map((r) => {
-                  const sel = checked.has(r.id);
-                  return (
-                    <div
-                      key={r.id}
-                      role="button"
-                      aria-pressed={sel}
-                      onClick={() => toggleCheck(r.id)}
-                      className={cn(
-                        "cursor-pointer select-none",
-                        sel && "bg-primary/5",
-                      )}
-                    >
-                      <ListRow
-                        icon={<ListRowCheckbox checked={sel} />}
-                        title={
-                          <Link
-                            href={`/sessions?sessionId=${r.sessionId}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 hover:underline underline-offset-4"
-                          >
-                            {fmtDate(r.date)}
-                            <ArrowUpRight
-                              className="size-3.5 text-muted-foreground/50"
-                              aria-hidden
-                            />
-                          </Link>
-                        }
-                        subtitle={formatCents(r.amountDue)}
-                        trailing={
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPaid([r.id], true);
-                            }}
-                            className="rounded-lg bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            Paid
-                          </Button>
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                  );
-                })}
-              </ListCard>
+              <UnpaidAttendanceList
+                rows={unpaid}
+                checked={checked}
+                onToggle={toggleCheck}
+                onMarkPaid={(id) => setPaid([id], true)}
+                renderTitle={(r) => (
+                  <Link
+                    href={`/sessions?sessionId=${r.sessionId}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                  >
+                    {fmtDate(r.date)}
+                    <ArrowUpRight
+                      className="size-3.5 text-muted-foreground/50"
+                      aria-hidden
+                    />
+                  </Link>
+                )}
+              />
             )}
           </section>
 
           {paid.length > 0 && (
             <section className="space-y-2">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-muted-foreground">
-                  Paid
-                </h2>
-                <Badge variant="secondary">{paid.length}</Badge>
-              </div>
-              <ListCard>
-                {paid.map((r) => (
-                  <ListRow
-                    key={r.id}
-                    icon={<ListRowCheckbox checked muted />}
-                    title={
-                      <span className="text-muted-foreground">
-                        <Link
-                          href={`/sessions?sessionId=${r.sessionId}`}
-                          className="inline-flex items-center gap-1 hover:underline underline-offset-4"
-                        >
-                          {fmtDate(r.date)}
-                          <ArrowUpRight
-                            className="size-3.5 text-muted-foreground/50"
-                            aria-hidden
-                          />
-                        </Link>
-                      </span>
-                    }
-                    subtitle={formatCents(r.amountDue)}
-                    trailing={
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPaid([r.id], false)}
-                        className="rounded-lg text-muted-foreground"
-                      >
-                        Undo
-                      </Button>
-                    }
-                    className="w-full"
-                  />
-                ))}
-              </ListCard>
+              <AttendanceSectionHeader label="Paid" count={paid.length} />
+              <PaidAttendanceList
+                rows={paid}
+                onUndo={(id) => setPaid([id], false)}
+                renderTitle={(r) => (
+                  <Link
+                    href={`/sessions?sessionId=${r.sessionId}`}
+                    className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                  >
+                    {fmtDate(r.date)}
+                    <ArrowUpRight
+                      className="size-3.5 text-muted-foreground/50"
+                      aria-hidden
+                    />
+                  </Link>
+                )}
+              />
             </section>
           )}
 
@@ -384,20 +322,11 @@ export function PlayerDetail({
         </DialogContent>
       </Dialog>
 
-      {/* Floating action button — sits above the mobile home bar; the
-          transparent gutter is click-through so it doesn't block scrolling. */}
-      {checked.size > 0 && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-          <div className="mx-auto max-w-2xl">
-            <Button
-              onClick={() => setPaid([...checked], true)}
-              className="pointer-events-auto w-full rounded-2xl bg-green-600 hover:bg-green-700 text-white h-11 text-base shadow-lg shadow-green-600/30"
-            >
-              Mark {checked.size} paid · {formatCents(checkedTotal)}
-            </Button>
-          </div>
-        </div>
-      )}
+      <MarkPaidFloatingButton
+        count={checked.size}
+        total={checkedTotal}
+        onClick={() => setPaid([...checked], true)}
+      />
     </>
   );
 }
