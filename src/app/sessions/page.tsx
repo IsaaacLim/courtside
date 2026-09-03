@@ -1,97 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import {
-  ArrowUpRight,
-  EllipsisVertical,
-  Pencil,
-  Trash2,
-  User,
-  Users,
-} from "lucide-react";
-import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
 import { formatCents } from "@/lib/money";
+import { formatDate } from "@/lib/date";
 import { PageHeader } from "@/components/page-header";
-import { NewSessionForm } from "@/components/new-session-form";
 import {
-  ExpandBackBar,
   ExpandOverlay,
   ExpandTrigger,
   useExpandNudge,
 } from "@/components/expanding-detail";
 import { ListCard, ListRow } from "@/components/list-card";
-import {
-  AttendanceSectionHeader,
-  MarkPaidFloatingButton,
-  PaidAttendanceList,
-  UnpaidAttendanceList,
-} from "@/components/attendance-list";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
+import { SessionDetail, type SessionSummary } from "@/components/session-detail";
 import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
+import { CenteredSpinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-
-type SessionSummary = {
-  id: number;
-  date: string;
-  rate: number;
-  total: number;
-  paid: number;
-  unpaid: number;
-};
-
-type SessionAttendance = {
-  id: number;
-  playerId: number;
-  playerName: string;
-  playerActive: boolean;
-  amountDue: number;
-  paid: boolean;
-  paidAt: string | null;
-  method: string | null;
-};
-
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-// ISO timestamp -> "YYYY-MM-DD" in local time, for the edit form's date input.
-function toDateInput(iso: string): string {
-  const d = new Date(iso);
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
-}
+import { User, Users } from "lucide-react";
 
 function SessionList({
   sessions,
@@ -132,7 +59,7 @@ function SessionList({
                 )}
               </div>
             }
-            title={fmtDate(s.date)}
+            title={formatDate(s.date)}
             subtitle={`${formatCents(s.rate)} · ${s.total} ${s.total === 1 ? "player" : "players"}`}
             trailing={
               s.unpaid > 0 ? (
@@ -159,21 +86,10 @@ export default function SessionsPage() {
   }>(SESSIONS_KEY);
   const sessions = sessionsData?.sessions ?? [];
   const [selected, setSelected] = useState<SessionSummary | null>(null);
-  const attendancesKey = selected
-    ? `/api/attendances?sessionId=${selected.id}`
-    : null;
-  const { data: rowsData, isLoading: loadingRows } = useTrackedSWR<{
-    attendances: SessionAttendance[];
-  }>(attendancesKey);
-  const rows = rowsData?.attendances ?? [];
-  const [checked, setChecked] = useState<Set<number>>(new Set());
-  const [editOpen, setEditOpen] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const { nudge, requestOpen, reset } = useExpandNudge();
 
   function openSession(s: SessionSummary) {
     setSelected(s);
-    setChecked(new Set());
   }
 
   // Deep link from a player's session link: /sessions?sessionId=<id>. Only
@@ -204,90 +120,8 @@ export default function SessionsPage() {
     mutate(SESSIONS_KEY);
   }
 
-  // After a successful edit: close the drawer and refetch the updated session.
-  async function afterEdit() {
-    setEditOpen(false);
-    const id = selected?.id;
-    const result = await mutate<{ sessions: SessionSummary[] }>(
-      SESSIONS_KEY,
-    );
-    const updated = result?.sessions.find((s) => s.id === id);
-    if (updated) setSelected(updated);
-    if (id) mutate(`/api/attendances?sessionId=${id}`);
-    toast.success("Session updated");
-  }
-
-  async function deleteSession() {
-    if (!selected) return;
-    const label = fmtDate(selected.date);
-    const res = await fetch(`/api/sessions/${selected.id}`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
-      mutate("/api/overview");
-      back(); // returns to the list and refetches
-      toast.success(`Session on ${label} removed`);
-    } else {
-      toast.error("Could not delete session");
-    }
-  }
-
-  async function setPaid(ids: number[], paid: boolean) {
-    const affectedPlayerIds = new Set(
-      rows.filter((r) => ids.includes(r.id)).map((r) => r.playerId),
-    );
-    await Promise.all(
-      ids.map((id) =>
-        fetch(`/api/attendances/${id}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ paid }),
-        }),
-      ),
-    );
-    mutate(
-      attendancesKey,
-      (curr: { attendances: SessionAttendance[] } | undefined) =>
-        curr && {
-          attendances: curr.attendances.map((r) =>
-            ids.includes(r.id)
-              ? { ...r, paid, paidAt: paid ? new Date().toISOString() : null }
-              : r,
-          ),
-        },
-      { revalidate: false },
-    );
-    setChecked(new Set());
-    // Instant same-tab refresh of Overview/Players balances and the list's
-    // unpaid badge — this is also what makes mark-paid-from-Sessions
-    // consistent with mark-paid-from-player-detail (previously it wasn't).
-    mutate("/api/overview");
-    mutate(SESSIONS_KEY);
-    for (const pid of affectedPlayerIds) {
-      mutate(`/api/attendances?playerId=${pid}`);
-    }
-  }
-
-  function toggleCheck(id: number) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   const active = sessions.filter((s) => s.unpaid > 0);
   const archived = sessions.filter((s) => s.unpaid === 0);
-
-  // Detail-derived values (harmless in list mode: rows/checked are empty).
-  const unpaid = rows.filter((r) => !r.paid);
-  const paid = rows.filter((r) => r.paid);
-  const allSelected = unpaid.length > 0 && unpaid.every((r) => checked.has(r.id));
-  const outstanding = unpaid.reduce((sum, r) => sum + r.amountDue, 0);
-  const checkedTotal = unpaid
-    .filter((r) => checked.has(r.id))
-    .reduce((sum, r) => sum + r.amountDue, 0);
 
   return (
     <>
@@ -297,9 +131,7 @@ export default function SessionsPage() {
         <PageHeader title="Sessions" />
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="size-6" />
-          </div>
+          <CenteredSpinner />
         ) : (
           <Tabs defaultValue="active">
             <TabsList className="w-full">
@@ -323,203 +155,8 @@ export default function SessionsPage() {
       </div>
 
       <ExpandOverlay open={!!selected} layoutId={`session-${selected?.id}`}>
-        {selected && (
-          <>
-            <ExpandBackBar
-              onBack={back}
-              actions={
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Session actions"
-                      className="px-0"
-                    >
-                      <EllipsisVertical className="size-6" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => setEditOpen(true)}>
-                      <Pencil className="size-4" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={() => setConfirmOpen(true)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="size-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              }
-            />
-
-            {/* Header: session date + amount due. */}
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-2xl font-bold">
-                {fmtDate(selected.date)}
-              </span>
-              <Badge
-                variant={outstanding > 0 ? "destructive" : "secondary"}
-                className="text-sm"
-              >
-                {formatCents(outstanding)} due
-              </Badge>
-            </div>
-
-            {loadingRows ? (
-              <div className="flex justify-center py-16">
-                <Spinner className="size-6" />
-              </div>
-            ) : (
-              <>
-                <section className="space-y-2">
-                  <AttendanceSectionHeader
-                    label="Unpaid"
-                    count={unpaid.length}
-                    allSelected={allSelected}
-                    onToggleSelectAll={() =>
-                      setChecked(
-                        allSelected
-                          ? new Set()
-                          : new Set(unpaid.map((r) => r.id)),
-                      )
-                    }
-                  />
-                  {unpaid.length === 0 ? (
-                    <Empty className="border rounded-xl py-8">
-                      <EmptyHeader>
-                        <EmptyTitle>Everyone&rsquo;s paid 🎉</EmptyTitle>
-                      </EmptyHeader>
-                    </Empty>
-                  ) : (
-                    <UnpaidAttendanceList
-                      rows={unpaid}
-                      checked={checked}
-                      onToggle={toggleCheck}
-                      onMarkPaid={(id) => setPaid([id], true)}
-                      renderTitle={(r) =>
-                        r.playerActive ? (
-                          <Link
-                            href={`/?playerId=${r.playerId}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 hover:underline underline-offset-4"
-                          >
-                            {r.playerName}
-                            <ArrowUpRight
-                              className="size-3.5 text-muted-foreground/50"
-                              aria-hidden
-                            />
-                          </Link>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5">
-                            {r.playerName}
-                            <Badge variant="secondary" className="text-[10px]">
-                              Inactive
-                            </Badge>
-                          </span>
-                        )
-                      }
-                    />
-                  )}
-                </section>
-
-                {paid.length > 0 && (
-                  <section className="space-y-2">
-                    <AttendanceSectionHeader label="Paid" count={paid.length} />
-                    <PaidAttendanceList
-                      rows={paid}
-                      onUndo={(id) => setPaid([id], false)}
-                      renderTitle={(r) =>
-                        r.playerActive ? (
-                          <Link
-                            href={`/?playerId=${r.playerId}`}
-                            className="inline-flex items-center gap-1 hover:underline underline-offset-4"
-                          >
-                            {r.playerName}
-                            <ArrowUpRight
-                              className="size-3.5 text-muted-foreground/50"
-                              aria-hidden
-                            />
-                          </Link>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5">
-                            {r.playerName}
-                            <Badge variant="secondary" className="text-[10px]">
-                              Inactive
-                            </Badge>
-                          </span>
-                        )
-                      }
-                    />
-                  </section>
-                )}
-
-                {/* Spacer so the last rows can scroll clear of the floating bar. */}
-                {checked.size > 0 && <div className="h-16" aria-hidden />}
-              </>
-            )}
-          </>
-        )}
+        {selected && <SessionDetail session={selected} onBack={back} />}
       </ExpandOverlay>
-
-      {selected && (
-        <MarkPaidFloatingButton
-          count={checked.size}
-          total={checkedTotal}
-          onClick={() => setPaid([...checked], true)}
-        />
-      )}
-
-      {/* Edit drawer + delete dialog (portaled to body). */}
-      {selected && (
-        <>
-          <Drawer open={editOpen} onOpenChange={setEditOpen}>
-            <DrawerContent className="h-[85vh]">
-              <DrawerHeader className="text-left shrink-0">
-                <DrawerTitle>Edit session</DrawerTitle>
-              </DrawerHeader>
-              <div className="min-h-0 flex-1 px-4 pb-8">
-                <NewSessionForm
-                  fill
-                  session={{
-                    id: selected.id,
-                    date: toDateInput(selected.date),
-                    rate: selected.rate,
-                    playerIds: rows.map((r) => r.playerId),
-                  }}
-                  onSuccess={afterEdit}
-                />
-              </div>
-            </DrawerContent>
-          </Drawer>
-
-          <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete this session?</DialogTitle>
-                <DialogDescription>
-                  This permanently removes the session on{" "}
-                  {fmtDate(selected.date)} and its {rows.length}{" "}
-                  {rows.length === 1 ? "attendance" : "attendances"}. This
-                  can&rsquo;t be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  onClick={deleteSession}
-                  className="bg-destructive text-white hover:bg-destructive/90"
-                >
-                  Delete
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
-      )}
     </>
   );
 }

@@ -6,7 +6,9 @@ import { ArrowUpRight, EllipsisVertical, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
+import { useAttendanceMutations } from "@/lib/use-attendance-mutations";
 import { formatCents } from "@/lib/money";
+import { formatDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { ExpandBackBar } from "@/components/expanding-detail";
 import {
@@ -31,7 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { CenteredSpinner } from "@/components/ui/spinner";
 import {
   AttendanceSectionHeader,
   MarkPaidFloatingButton,
@@ -50,14 +52,6 @@ type AttendanceRow = {
   method: string | null;
 };
 
-function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 /**
  * A player's payment detail: unpaid/paid sessions with mark-paid actions.
  * Rendered inside an ExpandOverlay on the Overview page.
@@ -74,54 +68,15 @@ export function PlayerDetail({
     attendances: AttendanceRow[];
   }>(key);
   const rows = data?.attendances ?? [];
-  const [checked, setChecked] = useState<Set<number>>(new Set());
+  const { checked, setChecked, toggleCheck, setPaid } = useAttendanceMutations(
+    key,
+    rows,
+    (r) => `/api/attendances?sessionId=${r.sessionId}`,
+  );
   const [displayName, setDisplayName] = useState(player.name);
   const [editOpen, setEditOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
-
-  async function setPaid(ids: number[], paid: boolean) {
-    const affectedSessionIds = new Set(
-      rows.filter((r) => ids.includes(r.id)).map((r) => r.sessionId),
-    );
-    await Promise.all(
-      ids.map((id) =>
-        fetch(`/api/attendances/${id}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ paid }),
-        }),
-      ),
-    );
-    mutate(
-      key,
-      (curr: { attendances: AttendanceRow[] } | undefined) =>
-        curr && {
-          attendances: curr.attendances.map((r) =>
-            ids.includes(r.id)
-              ? { ...r, paid, paidAt: paid ? new Date().toISOString() : null }
-              : r,
-          ),
-        },
-      { revalidate: false },
-    );
-    setChecked(new Set());
-    // Instant same-tab refresh of Overview/Sessions balances.
-    mutate("/api/overview");
-    mutate("/api/sessions");
-    for (const sid of affectedSessionIds) {
-      mutate(`/api/attendances?sessionId=${sid}`);
-    }
-  }
-
-  function toggleCheck(id: number) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   async function saveRename() {
     const name = nameInput.trim();
@@ -210,20 +165,18 @@ export function PlayerDetail({
           <CardContent className="flex items-center justify-between text-sm">
             <div>
               <div className="text-xs text-muted-foreground">Earliest due</div>
-              <div className="font-medium">{fmtDate(earliestDue)}</div>
+              <div className="font-medium">{formatDate(earliestDue)}</div>
             </div>
             <div className="text-right">
               <div className="text-xs text-muted-foreground">Latest due</div>
-              <div className="font-medium">{fmtDate(latestDue)}</div>
+              <div className="font-medium">{formatDate(latestDue)}</div>
             </div>
           </CardContent>
         )}
       </Card>
 
       {loadingRows ? (
-        <div className="flex justify-center py-16">
-          <Spinner className="size-6" />
-        </div>
+        <CenteredSpinner />
       ) : (
         <>
           <section className="space-y-2">
@@ -255,7 +208,7 @@ export function PlayerDetail({
                     onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center gap-1 hover:underline underline-offset-4"
                   >
-                    {fmtDate(r.date)}
+                    {formatDate(r.date)}
                     <ArrowUpRight
                       className="size-3.5 text-muted-foreground/50"
                       aria-hidden
@@ -277,7 +230,7 @@ export function PlayerDetail({
                     href={`/sessions?sessionId=${r.sessionId}`}
                     className="inline-flex items-center gap-1 hover:underline underline-offset-4"
                   >
-                    {fmtDate(r.date)}
+                    {formatDate(r.date)}
                     <ArrowUpRight
                       className="size-3.5 text-muted-foreground/50"
                       aria-hidden

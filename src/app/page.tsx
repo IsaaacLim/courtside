@@ -22,7 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
+import { CenteredSpinner } from "@/components/ui/spinner";
 import {
   Empty,
   EmptyHeader,
@@ -109,9 +109,7 @@ export default function OverviewPage() {
         <PageHeader title="Overview" />
 
         {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Spinner className="size-6" />
-          </div>
+          <CenteredSpinner />
         ) : !data || error ? (
           <Empty className="border rounded-xl py-10">
             <EmptyHeader>

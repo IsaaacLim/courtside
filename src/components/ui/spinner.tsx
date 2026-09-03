@@ -7,4 +7,12 @@ function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
   )
 }
 
-export { Spinner }
+function CenteredSpinner() {
+  return (
+    <div className="flex justify-center py-16">
+      <Spinner className="size-6" />
+    </div>
+  )
+}
+
+export { Spinner, CenteredSpinner }
