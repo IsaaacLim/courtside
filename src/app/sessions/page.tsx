@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
-  ChevronRight,
   EllipsisVertical,
   Pencil,
   Trash2,
@@ -25,6 +24,7 @@ import {
   ExpandTrigger,
   useExpandNudge,
 } from "@/components/expanding-detail";
+import { ListCard, ListRow } from "@/components/list-card";
 import {
   Drawer,
   DrawerContent,
@@ -116,36 +116,41 @@ function SessionList({
     );
   }
   return (
-    <ItemGroup>
+    <ListCard>
       {sessions.map((s) => (
         <ExpandTrigger
           key={s.id}
           layoutId={`session-${s.id}`}
           nudge={nudge}
           onOpen={(y) => onOpen(s, y)}
+          surfaceClassName="border-transparent bg-card"
+          className="rounded-none p-0"
         >
-          <ItemContent>
-            <ItemTitle>{fmtDate(s.date)}</ItemTitle>
-            <ItemDescription className="flex items-center gap-1">
-              {formatCents(s.rate)} · {s.total}
-              {s.total === 1 ? (
-                <User className="size-3.5" />
+          <ListRow
+            icon={
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                {s.total === 1 ? (
+                  <User className="size-4" />
+                ) : (
+                  <Users className="size-4" />
+                )}
+              </div>
+            }
+            title={fmtDate(s.date)}
+            subtitle={`${formatCents(s.rate)} · ${s.total} ${s.total === 1 ? "player" : "players"}`}
+            trailing={
+              s.unpaid > 0 ? (
+                <Badge variant="destructive">{s.unpaid} unpaid</Badge>
               ) : (
-                <Users className="size-3.5" />
-              )}
-            </ItemDescription>
-          </ItemContent>
-          <ItemActions>
-            {s.unpaid > 0 ? (
-              <Badge variant="destructive">{s.unpaid} unpaid</Badge>
-            ) : (
-              <Badge variant="secondary">Paid</Badge>
-            )}
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </ItemActions>
+                <Badge variant="secondary">Paid</Badge>
+              )
+            }
+            chevron
+            className="w-full"
+          />
         </ExpandTrigger>
       ))}
-    </ItemGroup>
+    </ListCard>
   );
 }
 
