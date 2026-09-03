@@ -47,7 +47,7 @@ export default function RootLayout({
           <MotionConfig reducedMotion="user">
             <SwrProvider>
               <DataVersionWatcher />
-              <main className="flex-1 w-full max-w-2xl mx-auto px-4 pt-24 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+              <main className="flex-1 w-full max-w-2xl mx-auto px-5 pt-24 pb-[calc(6rem+env(safe-area-inset-bottom))]">
                 {children}
               </main>
               <NewSessionFab />
