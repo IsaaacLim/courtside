@@ -67,6 +67,8 @@ body {
   --popover-foreground: oklch(33.48% 0.03 281.97deg);
   --primary: oklch(66.25% 0.18 273.14deg);            /* primary-500 */
   --primary-foreground: oklch(97.6% 0.02 212.47deg);  /* primary-50 (contrast) */
+  --primary-gradient-from: #474cf1;                   /* primary button gradient, per UI reference */
+  --primary-gradient-to: #817ef4;                     /* ...fading toward the top right */
   --secondary: oklch(85.79% 0.01 271.31deg);          /* surface-100 */
   --secondary-foreground: oklch(33.48% 0.03 281.97deg);
   --muted: oklch(90.64% 0.01 267.4deg);               /* surface-50 */
@@ -103,6 +105,8 @@ body {
   --popover-foreground: oklch(90.64% 0.01 267.4deg);
   --primary: oklch(72.23% 0.14 273.55deg);            /* primary-400 (lighter for dark) */
   --primary-foreground: oklch(24.29% 0.03 283.92deg); /* surface-950 */
+  --primary-gradient-from: oklch(60% 0.18 273.14deg); /* primary button gradient, darker for dark mode */
+  --primary-gradient-to: oklch(72.23% 0.14 273.55deg); /* ...fading toward the top right */
   --secondary: oklch(41.9% 0.03 282.54deg);           /* surface-800 */
   --secondary-foreground: oklch(90.64% 0.01 267.4deg);
   --muted: oklch(41.9% 0.03 282.54deg);               /* surface-800 */
