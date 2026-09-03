@@ -4,6 +4,7 @@ import { useState } from "react";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
+import { prefetch } from "@/lib/prefetch";
 import { ShoppingBasket, Filter, Search } from "lucide-react";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -214,6 +215,9 @@ export default function OverviewPage() {
                         requestOpen(`player-${p.playerId}`, y, () =>
                           setSelectedPlayer({ id: p.playerId, name: p.name }),
                         )
+                      }
+                      onPrefetch={() =>
+                        prefetch(`/api/attendances?playerId=${p.playerId}`)
                       }
                       surfaceClassName="border-transparent bg-card"
                       className="rounded-none p-0"

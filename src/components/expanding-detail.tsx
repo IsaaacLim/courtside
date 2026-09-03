@@ -39,6 +39,7 @@ export function ExpandTrigger({
   layoutId,
   nudge,
   onOpen,
+  onPrefetch,
   className,
   surfaceClassName,
   children,
@@ -46,6 +47,8 @@ export function ExpandTrigger({
   layoutId: ExpandId;
   nudge: NudgeState;
   onOpen: (y: number) => void;
+  /** Fired on pointerdown, ahead of the click — start the detail's data fetch as early as possible so it's already in flight (or done) by the time the overlay mounts. */
+  onPrefetch?: () => void;
   className?: string;
   /** Override the row's own border/rounding/fill — e.g. for a flat row inside a ListCard, which draws its own card frame around the group instead. */
   surfaceClassName?: string;
@@ -72,6 +75,7 @@ export function ExpandTrigger({
       />
       <button
         type="button"
+        onPointerDown={onPrefetch}
         onClick={(e) => {
           // Nudge toward where the header settles (~72px from the top): up when
           // the row is below that point, down when above.

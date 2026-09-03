@@ -4,6 +4,7 @@ import { useState } from "react";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
+import { prefetch } from "@/lib/prefetch";
 import { formatCents } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { PageHeader } from "@/components/page-header";
@@ -46,6 +47,7 @@ function SessionList({
           layoutId={`session-${s.id}`}
           nudge={nudge}
           onOpen={(y) => onOpen(s, y)}
+          onPrefetch={() => prefetch(`/api/attendances?sessionId=${s.id}`)}
           surfaceClassName="border-transparent bg-card"
           className="rounded-none p-0"
         >
