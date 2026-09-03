@@ -15,13 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Item,
-  ItemGroup,
-  ItemContent,
-  ItemTitle,
-  ItemActions,
-} from "@/components/ui/item";
+import { ListCard, ListRow, ListRowAvatar } from "@/components/list-card";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import {
   Dialog,
@@ -192,19 +186,19 @@ export default function PlayersPage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <ItemGroup>
+        <ListCard>
           {players.map((p) => (
-            <Item key={p.id} variant="outline">
-              <ItemContent>
-                <ItemTitle
-                  className={
-                    p.active ? "" : "text-muted-foreground line-through"
-                  }
+            <ListRow
+              key={p.id}
+              icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
+              title={
+                <span
+                  className={p.active ? "" : "text-muted-foreground line-through"}
                 >
                   {p.name}
-                </ItemTitle>
-              </ItemContent>
-              <ItemActions>
+                </span>
+              }
+              trailing={
                 <ButtonGroup>
                   <Button
                     variant="ghost"
@@ -230,10 +224,11 @@ export default function PlayersPage() {
                     {p.active ? "Deactivate" : "Reactivate"}
                   </Button>
                 </ButtonGroup>
-              </ItemActions>
-            </Item>
+              }
+              className="w-full"
+            />
           ))}
-        </ItemGroup>
+        </ListCard>
       )}
 
       {/* Rename dialog */}
