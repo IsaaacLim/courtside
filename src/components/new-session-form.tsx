@@ -71,7 +71,10 @@ export function NewSessionForm({
   const [selected, setSelected] = useState<Set<number>>(
     () => new Set(session?.playerIds ?? []),
   );
-  const [date, setDate] = useState(session ? session.date : todayStr());
+  // Defaults to "" (not today's date) when creating: reading the current
+  // date during render would bake "today" into the prerendered HTML, which
+  // then goes stale — see the useEffect below instead.
+  const [date, setDate] = useState(session ? session.date : "");
   const [dateOpen, setDateOpen] = useState(false);
   const [rate, setRate] = useState(
     session ? (session.rate / 100).toString() : "",
@@ -81,8 +84,11 @@ export function NewSessionForm({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Prefill the rate from the last session only when creating a new one.
+    // Prefill the rate and date only when creating a new session — this runs
+    // in the browser only, never during prerendering.
     if (!editing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDate(todayStr());
       fetch("/api/sessions/last-rate")
         .then((r) => r.json())
         .then((d) => {
