@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
-import { ChevronRight, Filter, Search } from "lucide-react";
+import { Filter, Search } from "lucide-react";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { PlayerDetail } from "@/components/player-detail";
@@ -13,19 +13,13 @@ import {
   ExpandTrigger,
   useExpandNudge,
 } from "@/components/expanding-detail";
+import { ListCard, ListRow, ListRowAvatar } from "@/components/list-card";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ItemGroup,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
-  ItemActions,
-} from "@/components/ui/item";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -206,7 +200,7 @@ export default function OverviewPage() {
             </EmptyHeader>
           </Empty>
         ) : (
-          <ItemGroup>
+          <ListCard>
             {owing.map((p) => (
               <ExpandTrigger
                 key={p.playerId}
@@ -217,22 +211,24 @@ export default function OverviewPage() {
                     setSelectedPlayer({ id: p.playerId, name: p.name }),
                   )
                 }
+                surfaceClassName="border-transparent bg-card"
+                className="rounded-none p-0"
               >
-                <ItemContent>
-                  <ItemTitle>{p.name}</ItemTitle>
-                  <ItemDescription>
-                    {p.unpaid} unpaid {p.unpaid === 1 ? "session" : "sessions"}
-                  </ItemDescription>
-                </ItemContent>
-                <ItemActions>
-                  <span className="font-semibold text-red-600 dark:text-red-400">
-                    {formatCents(p.owed)}
-                  </span>
-                  <ChevronRight className="size-4 text-muted-foreground" />
-                </ItemActions>
+                <ListRow
+                  icon={<ListRowAvatar name={p.name} colorKey={String(p.playerId)} />}
+                  title={p.name}
+                  subtitle={`${p.unpaid} unpaid ${p.unpaid === 1 ? "session" : "sessions"}`}
+                  trailing={
+                    <span className="font-semibold text-red-600 dark:text-red-400">
+                      {formatCents(p.owed)}
+                    </span>
+                  }
+                  chevron
+                  className="w-full"
+                />
               </ExpandTrigger>
             ))}
-          </ItemGroup>
+          </ListCard>
         )}
       </section>
           </>

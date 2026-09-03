@@ -39,12 +39,15 @@ export function ExpandTrigger({
   nudge,
   onOpen,
   className,
+  surfaceClassName,
   children,
 }: {
   layoutId: ExpandId;
   nudge: NudgeState;
   onOpen: (y: number) => void;
   className?: string;
+  /** Override the row's own border/rounding/fill — e.g. for a flat row inside a ListCard, which draws its own card frame around the group instead. */
+  surfaceClassName?: string;
   children: ReactNode;
 }) {
   const leaving = nudge.id === layoutId;
@@ -61,8 +64,9 @@ export function ExpandTrigger({
         // Fade the border out as it expands (it would otherwise scale into a
         // thick frame) and back in as it collapses.
         className={cn(
-          "absolute inset-0 rounded-lg border bg-raised transition-[border-color] duration-200",
-          leaving ? "border-transparent" : "border-border",
+          "absolute inset-0 transition-[border-color] duration-200",
+          surfaceClassName ??
+            cn("rounded-lg border bg-raised", leaving ? "border-transparent" : "border-border"),
         )}
       />
       <button

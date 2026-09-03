@@ -58,9 +58,9 @@ body {
    indigo primary, calm lavender-gray surfaces (secondary/muted/accent stay
    neutral). Each value notes the source ramp step. */
 :root {
-  --background: oklch(96.88% 0.004 301.42deg);        /* #f5f4f7 */
+  --background: oklch(95.87% 0.01 273.64deg);         /* #eff1f8 — lavender-gray, matches the "Transactions" UI reference */
   --foreground: oklch(33.48% 0.03 281.97deg);         /* surface-900 */
-  --card: oklch(100% 0 0deg);                         /* body background (white) */
+  --card: oklch(96.2% 0.007 279.32deg);               /* #f1f2f7 */
   --card-foreground: oklch(33.48% 0.03 281.97deg);    /* surface-900 */
   --raised: oklch(98.51% 0 0deg);                     /* #fafafa (raised surface) */
   --popover: oklch(100% 0 0deg);
