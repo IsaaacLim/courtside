@@ -47,7 +47,7 @@ export function PageHeader({
   const titleColor = `color-mix(in oklab, var(--foreground), var(--primary-foreground) ${progress * 100}%)`;
 
   return (
-    <div className={cn("sticky top-0 z-20 -mx-4", className)}>
+    <div className={cn("sticky top-0 z-20 -mx-5", className)}>
       {/* Primary background fades in proportionally to scroll. It bleeds
           upward by COLLAPSE_DISTANCE so it always reaches the top of the
           viewport — no light strip is left in the gap the header scrolls
@@ -57,7 +57,7 @@ export function PageHeader({
         style={{ top: -COLLAPSE_DISTANCE, opacity: progress }}
         aria-hidden
       />
-      <div className="relative px-4 pt-6 pb-2">
+      <div className="relative px-5 pt-6 pb-2">
         {leading && <div className="mb-1">{leading}</div>}
         <div className="flex items-center justify-between gap-3">
           <h1
