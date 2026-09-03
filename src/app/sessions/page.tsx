@@ -104,8 +104,8 @@ export default function SessionsPage() {
     mutate(SESSIONS_KEY);
   }
 
-  const active = sessions.filter((s) => s.unpaid > 0);
-  const archived = sessions.filter((s) => s.unpaid === 0);
+  const outstanding = sessions.filter((s) => s.unpaid > 0);
+  const settled = sessions.filter((s) => s.unpaid === 0);
 
   return (
     <>
@@ -117,22 +117,22 @@ export default function SessionsPage() {
         {loading ? (
           <CenteredSpinner />
         ) : (
-          <Tabs defaultValue="active">
+          <Tabs defaultValue="outstanding">
             <TabsList variant="pill" className="w-full">
-              <TabsTrigger value="active">Active ({active.length})</TabsTrigger>
-              <TabsTrigger value="archive">
-                Archive ({archived.length})
+              <TabsTrigger value="outstanding">
+                Outstanding ({outstanding.length})
               </TabsTrigger>
+              <TabsTrigger value="settled">Settled ({settled.length})</TabsTrigger>
             </TabsList>
-            <TabsContent value="active" className="mt-3">
-              <SessionList sessions={active} nudge={nudge} onOpen={openTrigger} />
-            </TabsContent>
-            <TabsContent value="archive" className="mt-3">
+            <TabsContent value="outstanding" className="mt-3">
               <SessionList
-                sessions={archived}
+                sessions={outstanding}
                 nudge={nudge}
                 onOpen={openTrigger}
               />
+            </TabsContent>
+            <TabsContent value="settled" className="mt-3">
+              <SessionList sessions={settled} nudge={nudge} onOpen={openTrigger} />
             </TabsContent>
           </Tabs>
         )}
