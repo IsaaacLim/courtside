@@ -1,6 +1,7 @@
 import { Children, Fragment, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Matches ListRow's own horizontal padding, so the divider lines up with
 // where its icon starts and its trailing content ends, instead of running
@@ -71,6 +72,39 @@ export function ListRowAvatar({
       )}
     >
       {initial}
+    </div>
+  );
+}
+
+/**
+ * Circular checkbox for rows in a selectable list — sits in the same leading
+ * slot as ListRowAvatar, so a "select" list matches the look of the other
+ * ListCard lists instead of a plain square checkbox. `muted` fades an
+ * already-checked box (e.g. a "paid" row that's no longer actionable) so it
+ * reads as settled rather than as a live selection.
+ */
+export function ListRowCheckbox({
+  checked,
+  muted = false,
+  className,
+}: {
+  checked: boolean;
+  muted?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className="flex size-10 shrink-0 items-center justify-center">
+      <Checkbox
+        checked={checked}
+        tabIndex={-1}
+        aria-hidden
+        className={cn(
+          "pointer-events-none size-6 rounded-full border-2",
+          muted &&
+            "data-checked:border-transparent data-checked:bg-primary/30 data-checked:text-primary-foreground/80",
+          className,
+        )}
+      />
     </div>
   );
 }

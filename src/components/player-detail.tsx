@@ -31,17 +31,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Item,
-  ItemGroup,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
-  ItemActions,
-} from "@/components/ui/item";
+import { ListCard, ListRow, ListRowCheckbox } from "@/components/list-card";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 type AttendanceRow = {
@@ -262,29 +254,23 @@ export function PlayerDetail({
                 </EmptyHeader>
               </Empty>
             ) : (
-              <ItemGroup>
+              <ListCard>
                 {unpaid.map((r) => {
                   const sel = checked.has(r.id);
                   return (
-                    <Item
+                    <div
                       key={r.id}
-                      variant="outline"
                       role="button"
                       aria-pressed={sel}
                       onClick={() => toggleCheck(r.id)}
                       className={cn(
-                        "cursor-pointer select-none bg-raised",
-                        sel && "border-primary ring-1 ring-primary/30",
+                        "cursor-pointer select-none",
+                        sel && "bg-primary/5",
                       )}
                     >
-                      <Checkbox
-                        checked={sel}
-                        className="size-5 pointer-events-none"
-                        tabIndex={-1}
-                        aria-hidden
-                      />
-                      <ItemContent>
-                        <ItemTitle>
+                      <ListRow
+                        icon={<ListRowCheckbox checked={sel} />}
+                        title={
                           <Link
                             href={`/sessions?sessionId=${r.sessionId}`}
                             onClick={(e) => e.stopPropagation()}
@@ -296,26 +282,26 @@ export function PlayerDetail({
                               aria-hidden
                             />
                           </Link>
-                        </ItemTitle>
-                        <ItemDescription>
-                          {formatCents(r.amountDue)}
-                        </ItemDescription>
-                      </ItemContent>
-                      <ItemActions>
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPaid([r.id], true);
-                          }}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          Paid
-                        </Button>
-                      </ItemActions>
-                    </Item>
+                        }
+                        subtitle={formatCents(r.amountDue)}
+                        trailing={
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPaid([r.id], true);
+                            }}
+                            className="rounded-lg bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            Paid
+                          </Button>
+                        }
+                        className="w-full"
+                      />
+                    </div>
                   );
                 })}
-              </ItemGroup>
+              </ListCard>
             )}
           </section>
 
@@ -327,11 +313,13 @@ export function PlayerDetail({
                 </h2>
                 <Badge variant="secondary">{paid.length}</Badge>
               </div>
-              <ItemGroup>
+              <ListCard>
                 {paid.map((r) => (
-                  <Item key={r.id} variant="muted" className="bg-raised">
-                    <ItemContent>
-                      <ItemTitle className="text-muted-foreground">
+                  <ListRow
+                    key={r.id}
+                    icon={<ListRowCheckbox checked muted />}
+                    title={
+                      <span className="text-muted-foreground">
                         <Link
                           href={`/sessions?sessionId=${r.sessionId}`}
                           className="inline-flex items-center gap-1 hover:underline underline-offset-4"
@@ -342,24 +330,23 @@ export function PlayerDetail({
                             aria-hidden
                           />
                         </Link>
-                      </ItemTitle>
-                      <ItemDescription>
-                        {formatCents(r.amountDue)}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
+                      </span>
+                    }
+                    subtitle={formatCents(r.amountDue)}
+                    trailing={
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setPaid([r.id], false)}
-                        className="text-muted-foreground"
+                        className="rounded-lg text-muted-foreground"
                       >
                         Undo
                       </Button>
-                    </ItemActions>
-                  </Item>
+                    }
+                    className="w-full"
+                  />
                 ))}
-              </ItemGroup>
+              </ListCard>
             </section>
           )}
 
@@ -404,7 +391,7 @@ export function PlayerDetail({
           <div className="mx-auto max-w-2xl">
             <Button
               onClick={() => setPaid([...checked], true)}
-              className="pointer-events-auto w-full bg-green-600 hover:bg-green-700 text-white h-11 text-base shadow-lg shadow-green-600/30"
+              className="pointer-events-auto w-full rounded-2xl bg-green-600 hover:bg-green-700 text-white h-11 text-base shadow-lg shadow-green-600/30"
             >
               Mark {checked.size} paid · {formatCents(checkedTotal)}
             </Button>

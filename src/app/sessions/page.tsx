@@ -24,7 +24,7 @@ import {
   ExpandTrigger,
   useExpandNudge,
 } from "@/components/expanding-detail";
-import { ListCard, ListRow } from "@/components/list-card";
+import { ListCard, ListRow, ListRowCheckbox } from "@/components/list-card";
 import {
   Drawer,
   DrawerContent,
@@ -32,7 +32,6 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,14 +50,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Item,
-  ItemGroup,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
-  ItemActions,
-} from "@/components/ui/item";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 type SessionSummary = {
@@ -393,30 +384,24 @@ export default function SessionsPage() {
                       </EmptyHeader>
                     </Empty>
                   ) : (
-                    <ItemGroup>
+                    <ListCard>
                       {unpaid.map((r) => {
                         const sel = checked.has(r.id);
                         return (
-                          <Item
+                          <div
                             key={r.id}
-                            variant="outline"
                             role="button"
                             aria-pressed={sel}
                             onClick={() => toggleCheck(r.id)}
                             className={cn(
-                              "cursor-pointer select-none bg-raised",
-                              sel && "border-primary ring-1 ring-primary/30",
+                              "cursor-pointer select-none",
+                              sel && "bg-primary/5",
                             )}
                           >
-                            <Checkbox
-                              checked={sel}
-                              className="size-5 pointer-events-none"
-                              tabIndex={-1}
-                              aria-hidden
-                            />
-                            <ItemContent>
-                              <ItemTitle>
-                                {r.playerActive ? (
+                            <ListRow
+                              icon={<ListRowCheckbox checked={sel} />}
+                              title={
+                                r.playerActive ? (
                                   <Link
                                     href={`/?playerId=${r.playerId}`}
                                     onClick={(e) => e.stopPropagation()}
@@ -435,34 +420,34 @@ export default function SessionsPage() {
                                       Inactive
                                     </Badge>
                                   </span>
-                                )}
-                              </ItemTitle>
-                              <ItemDescription>
-                                {formatCents(r.amountDue)}
-                              </ItemDescription>
-                            </ItemContent>
-                            <ItemActions>
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPaid([r.id], true);
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                              >
-                                Paid
-                              </Button>
-                            </ItemActions>
-                          </Item>
+                                )
+                              }
+                              subtitle={formatCents(r.amountDue)}
+                              trailing={
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPaid([r.id], true);
+                                  }}
+                                  className="rounded-2xl bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  Paid
+                                </Button>
+                              }
+                              className="w-full"
+                            />
+                          </div>
                         );
                       })}
-                    </ItemGroup>
+                    </ListCard>
                   )}
                 </section>
 
                 {checked.size > 0 && (
                   <Button
                     onClick={() => setPaid([...checked], true)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white h-11 text-base"
+                    className="w-full rounded-2xl bg-green-600 hover:bg-green-700 text-white h-11 text-base"
                   >
                     Mark {checked.size} paid · {formatCents(checkedTotal)}
                   </Button>
@@ -476,11 +461,13 @@ export default function SessionsPage() {
                       </h2>
                       <Badge variant="secondary">{paid.length}</Badge>
                     </div>
-                    <ItemGroup>
+                    <ListCard>
                       {paid.map((r) => (
-                        <Item key={r.id} variant="muted" className="bg-raised">
-                          <ItemContent>
-                            <ItemTitle className="text-muted-foreground">
+                        <ListRow
+                          key={r.id}
+                          icon={<ListRowCheckbox checked muted />}
+                          title={
+                            <span className="text-muted-foreground">
                               {r.playerActive ? (
                                 <Link
                                   href={`/?playerId=${r.playerId}`}
@@ -500,12 +487,10 @@ export default function SessionsPage() {
                                   </Badge>
                                 </span>
                               )}
-                            </ItemTitle>
-                            <ItemDescription>
-                              {formatCents(r.amountDue)}
-                            </ItemDescription>
-                          </ItemContent>
-                          <ItemActions>
+                            </span>
+                          }
+                          subtitle={formatCents(r.amountDue)}
+                          trailing={
                             <Button
                               variant="ghost"
                               size="sm"
@@ -514,10 +499,11 @@ export default function SessionsPage() {
                             >
                               Undo
                             </Button>
-                          </ItemActions>
-                        </Item>
+                          }
+                          className="w-full"
+                        />
                       ))}
-                    </ItemGroup>
+                    </ListCard>
                   </section>
                 )}
               </>
