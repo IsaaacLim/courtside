@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
@@ -91,22 +91,6 @@ export default function SessionsPage() {
   function openSession(s: SessionSummary) {
     setSelected(s);
   }
-
-  // Deep link from a player's session link: /sessions?sessionId=<id>. Only
-  // acted on once, so re-opening the page doesn't keep re-triggering it.
-  const deepLinkHandled = useRef(false);
-  useEffect(() => {
-    if (!sessionsData || deepLinkHandled.current) return;
-    deepLinkHandled.current = true;
-    const sid = Number(
-      new URLSearchParams(window.location.search).get("sessionId"),
-    );
-    if (Number.isInteger(sid)) {
-      const s = sessionsData.sessions.find((x) => x.id === sid);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (s) openSession(s);
-    }
-  }, [sessionsData]);
 
   // Nudge the tapped row's label toward the header, then expand the panel.
   function openTrigger(s: SessionSummary, y: number) {

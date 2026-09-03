@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ArrowUpRight, EllipsisVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
@@ -11,6 +10,7 @@ import { formatCents } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { ExpandBackBar } from "@/components/expanding-detail";
 import { NewSessionForm } from "@/components/new-session-form";
+import { PlayerPreview } from "@/components/player-preview";
 import {
   Drawer,
   DrawerContent,
@@ -97,6 +97,10 @@ export function SessionDetail({
   );
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [previewPlayer, setPreviewPlayer] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   // After a successful edit: close the drawer and refetch the updated session.
   async function afterEdit() {
@@ -204,17 +208,20 @@ export function SessionDetail({
                 onMarkPaid={(id) => setPaid([id], true)}
                 renderTitle={(r) =>
                   r.playerActive ? (
-                    <Link
-                      href={`/?playerId=${r.playerId}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewPlayer({ id: r.playerId, name: r.playerName });
+                      }}
+                      className="inline-flex items-center gap-1"
                     >
                       {r.playerName}
                       <ArrowUpRight
                         className="size-3.5 text-muted-foreground/50"
                         aria-hidden
                       />
-                    </Link>
+                    </button>
                   ) : (
                     <span className="inline-flex items-center gap-1.5">
                       {r.playerName}
@@ -236,16 +243,19 @@ export function SessionDetail({
                 onUndo={(id) => setPaid([id], false)}
                 renderTitle={(r) =>
                   r.playerActive ? (
-                    <Link
-                      href={`/?playerId=${r.playerId}`}
-                      className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewPlayer({ id: r.playerId, name: r.playerName })
+                      }
+                      className="inline-flex items-center gap-1"
                     >
                       {r.playerName}
                       <ArrowUpRight
                         className="size-3.5 text-muted-foreground/50"
                         aria-hidden
                       />
-                    </Link>
+                    </button>
                   ) : (
                     <span className="inline-flex items-center gap-1.5">
                       {r.playerName}
@@ -310,6 +320,11 @@ export function SessionDetail({
         count={checked.size}
         total={checkedTotal}
         onClick={() => setPaid([...checked], true)}
+      />
+
+      <PlayerPreview
+        player={previewPlayer}
+        onOpenChange={(open) => !open && setPreviewPlayer(null)}
       />
     </>
   );

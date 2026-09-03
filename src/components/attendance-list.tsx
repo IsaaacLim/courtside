@@ -137,6 +137,39 @@ export function PaidAttendanceList<T extends AttendanceLike>({
 }
 
 /**
+ * Non-interactive counterpart to Unpaid/PaidAttendanceList: same row look
+ * (checkbox reflecting paid state, dimmed once paid) but no click target, no
+ * per-row action — used by the read-only preview modals.
+ */
+export function ReadOnlyAttendanceList<T extends AttendanceLike & { paid: boolean }>({
+  rows,
+  renderTitle,
+}: {
+  rows: T[];
+  renderTitle: (row: T) => ReactNode;
+}) {
+  return (
+    <ListCard>
+      {rows.map((r) => (
+        <ListRow
+          key={r.id}
+          icon={<ListRowCheckbox checked={r.paid} muted={r.paid} />}
+          title={
+            r.paid ? (
+              <span className="text-muted-foreground">{renderTitle(r)}</span>
+            ) : (
+              renderTitle(r)
+            )
+          }
+          subtitle={formatCents(r.amountDue)}
+          className="w-full"
+        />
+      ))}
+    </ListCard>
+  );
+}
+
+/**
  * Fixed bottom "Mark N paid" bar, floating above the mobile home bar.
  * Renders nothing when there's no active selection.
  */

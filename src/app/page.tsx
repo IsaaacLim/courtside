@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
@@ -69,22 +69,6 @@ export default function OverviewPage() {
     reset();
     mutate(OVERVIEW_KEY); // refresh balances after any mark-paid in the detail
   }
-
-  // Deep link (e.g. from a session's player link): /?playerId=<id>. Only
-  // acted on once, so re-opening the same page doesn't keep re-triggering it.
-  const deepLinkHandled = useRef(false);
-  useEffect(() => {
-    if (!data || deepLinkHandled.current) return;
-    deepLinkHandled.current = true;
-    const pid = Number(
-      new URLSearchParams(window.location.search).get("playerId"),
-    );
-    if (Number.isInteger(pid)) {
-      const p = data.playerBalances.find((x) => x.playerId === pid);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (p) setSelectedPlayer({ id: p.playerId, name: p.name });
-    }
-  }, [data]);
 
   const q = search.trim().toLowerCase();
   const allOwing = (data?.playerBalances ?? []).filter((p) => p.owed > 0);

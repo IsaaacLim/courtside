@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { ArrowUpRight, EllipsisVertical, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
@@ -11,6 +10,7 @@ import { formatCents } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { ExpandBackBar } from "@/components/expanding-detail";
+import { SessionPreview } from "@/components/session-preview";
 import {
   Card,
   CardContent,
@@ -77,6 +77,10 @@ export function PlayerDetail({
   const [editOpen, setEditOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
+  const [previewSession, setPreviewSession] = useState<{
+    id: number;
+    date: string;
+  } | null>(null);
 
   async function saveRename() {
     const name = nameInput.trim();
@@ -203,17 +207,20 @@ export function PlayerDetail({
                 onToggle={toggleCheck}
                 onMarkPaid={(id) => setPaid([id], true)}
                 renderTitle={(r) => (
-                  <Link
-                    href={`/sessions?sessionId=${r.sessionId}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewSession({ id: r.sessionId, date: r.date });
+                    }}
+                    className="inline-flex items-center gap-1"
                   >
                     {formatDate(r.date)}
                     <ArrowUpRight
                       className="size-3.5 text-muted-foreground/50"
                       aria-hidden
                     />
-                  </Link>
+                  </button>
                 )}
               />
             )}
@@ -226,16 +233,19 @@ export function PlayerDetail({
                 rows={paid}
                 onUndo={(id) => setPaid([id], false)}
                 renderTitle={(r) => (
-                  <Link
-                    href={`/sessions?sessionId=${r.sessionId}`}
-                    className="inline-flex items-center gap-1 hover:underline underline-offset-4"
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewSession({ id: r.sessionId, date: r.date })
+                    }
+                    className="inline-flex items-center gap-1"
                   >
                     {formatDate(r.date)}
                     <ArrowUpRight
                       className="size-3.5 text-muted-foreground/50"
                       aria-hidden
                     />
-                  </Link>
+                  </button>
                 )}
               />
             </section>
@@ -279,6 +289,11 @@ export function PlayerDetail({
         count={checked.size}
         total={checkedTotal}
         onClick={() => setPaid([...checked], true)}
+      />
+
+      <SessionPreview
+        session={previewSession}
+        onOpenChange={(open) => !open && setPreviewSession(null)}
       />
     </>
   );
