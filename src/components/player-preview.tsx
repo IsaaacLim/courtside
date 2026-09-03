@@ -2,25 +2,17 @@
 
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useBackDismiss } from "@/lib/use-back-dismiss";
-import { formatCents } from "@/lib/money";
 import { formatDate } from "@/lib/date";
-import { cn } from "@/lib/utils";
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { CenteredSpinner } from "@/components/ui/spinner";
 import {
   AttendanceSectionHeader,
+  OutstandingCard,
   ReadOnlyAttendanceList,
 } from "@/components/attendance-list";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -72,37 +64,11 @@ export function PlayerPreview({
             <CenteredSpinner />
           ) : (
             <>
-              <Card>
-                <CardHeader>
-                  <CardDescription>Outstanding</CardDescription>
-                  <CardTitle
-                    className={cn(
-                      "text-4xl font-bold tabular-nums",
-                      outstanding > 0
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {formatCents(outstanding)}
-                  </CardTitle>
-                </CardHeader>
-                {unpaid.length > 0 && (
-                  <CardContent className="flex items-center justify-between text-sm">
-                    <div>
-                      <div className="text-xs text-muted-foreground">
-                        Earliest due
-                      </div>
-                      <div className="font-medium">{formatDate(earliestDue)}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-muted-foreground">
-                        Latest due
-                      </div>
-                      <div className="font-medium">{formatDate(latestDue)}</div>
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
+              <OutstandingCard
+                outstanding={outstanding}
+                earliestDue={earliestDue}
+                latestDue={latestDue}
+              />
 
               <section className="space-y-2">
                 <AttendanceSectionHeader label="Unpaid" count={unpaid.length} />

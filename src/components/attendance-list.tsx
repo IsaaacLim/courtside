@@ -1,11 +1,66 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { formatCents } from "@/lib/money";
+import { formatDate } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ListCard, ListRow, ListRowCheckbox } from "@/components/list-card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 type AttendanceLike = { id: number; amountDue: number };
+
+/**
+ * The "Outstanding $X" hero card shown atop a player's attendance — shared
+ * between the full Player detail view and the read-only Player preview
+ * drawer opened from inside a Session, so both stay visually identical.
+ * Styled to match ListCard (same bg/border/shadow/radius) rather than the
+ * plain default Card look.
+ */
+export function OutstandingCard({
+  outstanding,
+  earliestDue,
+  latestDue,
+}: {
+  outstanding: number;
+  earliestDue?: string;
+  latestDue?: string;
+}) {
+  return (
+    <Card className="rounded-2xl border border-[#f3f3fb] shadow-lg ring-0 mt-2">
+      <CardHeader>
+        <CardDescription>Outstanding</CardDescription>
+        <CardTitle
+          className={cn(
+            "text-4xl font-bold tabular-nums",
+            outstanding > 0
+              ? "text-red-600 dark:text-red-400"
+              : "text-muted-foreground",
+          )}
+        >
+          {formatCents(outstanding)}
+        </CardTitle>
+      </CardHeader>
+      {earliestDue && latestDue && (
+        <CardContent className="flex items-center justify-between text-sm">
+          <div>
+            <div className="text-xs text-muted-foreground">Earliest due</div>
+            <div className="font-medium">{formatDate(earliestDue)}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-muted-foreground">Latest due</div>
+            <div className="font-medium">{formatDate(latestDue)}</div>
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
 
 /**
  * "Unpaid"/"Paid" section heading with the count badge and an optional
