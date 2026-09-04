@@ -139,7 +139,7 @@ export function UnpaidAttendanceList<T extends AttendanceLike>({
                     e.stopPropagation();
                     onMarkPaid(r.id);
                   }}
-                  className="rounded-2xl bg-green-600 hover:bg-green-700 text-white"
+                  className="rounded-lg bg-green-600 hover:bg-green-700 text-white"
                 >
                   Paid
                 </Button>
@@ -243,7 +243,7 @@ export function MarkPaidFloatingButton({
       <div className="mx-auto max-w-2xl">
         <Button
           onClick={onClick}
-          className="pointer-events-auto w-full rounded-2xl bg-green-600 hover:bg-green-700 text-white h-11 text-base shadow-lg shadow-green-600/30"
+          className="pointer-events-auto w-full rounded-full bg-green-600 hover:bg-green-700 text-white h-11 text-base shadow-lg shadow-green-600/30"
         >
           Mark {count} paid · {formatCents(total)}
         </Button>
