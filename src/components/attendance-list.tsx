@@ -32,7 +32,7 @@ export function OutstandingCard({
   latestDue?: string;
 }) {
   return (
-    <Card className="rounded-2xl border border-[#f3f3fb] shadow-lg ring-0 mt-2">
+    <Card className="rounded-2xl border border-list-border shadow-lg ring-0 mt-2">
       <CardHeader>
         <CardDescription>Outstanding</CardDescription>
         <CardTitle

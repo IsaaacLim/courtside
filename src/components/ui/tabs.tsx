@@ -31,7 +31,7 @@ const tabsListVariants = cva(
       variant: {
         default: "bg-muted",
         line: "gap-1 bg-transparent",
-        pill: "border border-[#f3f3fb] bg-card shadow-lg",
+        pill: "border border-list-border bg-card shadow-lg",
       },
     },
     defaultVariants: {

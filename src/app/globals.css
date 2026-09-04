@@ -23,6 +23,8 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-list-border: var(--list-border);
+  --color-list-divider: var(--list-divider);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -73,6 +75,30 @@
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25), 0 -6px 10px 0 rgb(0 0 0 / 0.08);
 }
 
+/* Same shapes, heavier alpha — a shadow this faint disappears against an
+   already-dark background, so dark mode needs noticeably darker shadows to
+   read as elevation at all, not lighter ones. */
+.dark {
+  --shadow-2xs: 0 1px rgb(0 0 0 / 0.4), 0 -1px rgb(0 0 0 / 0.15);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 -1px 1px 0 rgb(0 0 0 / 0.15);
+  --shadow-sm:
+    0 1px 3px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.45),
+    0 -1px 2px 0 rgb(0 0 0 / 0.15);
+  --shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.45),
+    0 -1px 2px 0 rgb(0 0 0 / 0.15);
+  --shadow-md:
+    0 4px 6px -1px rgb(0 0 0 / 0.45), 0 2px 4px -2px rgb(0 0 0 / 0.45),
+    0 -2px 3px 0 rgb(0 0 0 / 0.18);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5),
+    0 -3px 5px 0 rgb(0 0 0 / 0.2);
+  --shadow-xl:
+    0 20px 25px -5px rgb(0 0 0 / 0.55), 0 8px 10px -6px rgb(0 0 0 / 0.55),
+    0 -4px 6px 0 rgb(0 0 0 / 0.22);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.6), 0 -6px 10px 0 rgb(0 0 0 / 0.25);
+}
+
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
@@ -103,6 +129,8 @@ body {
   --destructive: oklch(55.13% 0.22 19.72deg);         /* error-500 */
   --border: oklch(80.91% 0.02 274.81deg);             /* surface-200 */
   --input: oklch(80.91% 0.02 274.81deg);              /* surface-200 */
+  --list-border: #f3f3fb;                             /* ListCard hairline — barely off the #eff1f8 page bg */
+  --list-divider: #e7e8f0;                            /* ListCard row divider — a touch darker than the #f1f2f7 card fill */
   --ring: oklch(66.25% 0.18 273.14deg);               /* primary-500 */
   --chart-1: oklch(66.25% 0.18 273.14deg);            /* primary */
   --chart-2: oklch(60.13% 0.1 200.95deg);             /* tertiary (teal) */
@@ -141,6 +169,8 @@ body {
   --destructive: oklch(57.47% 0.22 14.92deg);         /* error-400 */
   --border: oklch(100% 0 0deg / 12%);
   --input: oklch(100% 0 0deg / 16%);
+  --list-border: #343545;                             /* ListCard hairline — barely off the dark page bg */
+  --list-divider: oklch(100% 0 0deg / 12%);           /* ListCard row divider — lighter than the dark card fill, not darker (stays visible) */
   --ring: oklch(72.23% 0.14 273.55deg);               /* primary-400 */
   --chart-1: oklch(72.23% 0.14 273.55deg);            /* primary */
   --chart-2: oklch(65.06% 0.1 197.47deg);             /* tertiary (teal) */

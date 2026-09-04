@@ -67,7 +67,7 @@ export function SessionPreview({
 
   return (
     <Drawer open={!!session} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-[85vh]">
+      <DrawerContent className="h-[85vh] bg-background">
         <DrawerHeader className="text-left shrink-0">
           <div className="flex items-center justify-between gap-3 pr-8">
             <DrawerTitle className="text-base">

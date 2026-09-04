@@ -24,13 +24,13 @@ export function ListCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-[#f3f3fb] bg-card shadow-lg",
+        "overflow-hidden rounded-2xl border border-list-border bg-card shadow-lg",
         className,
       )}
     >
       {rows.map((row, i) => (
         <Fragment key={i}>
-          {i > 0 && <div className={cn(ROW_INSET, "h-px bg-[#e7e8f0]")} aria-hidden />}
+          {i > 0 && <div className={cn(ROW_INSET, "h-px bg-list-divider")} aria-hidden />}
           {row}
         </Fragment>
       ))}

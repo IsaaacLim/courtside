@@ -75,3 +75,40 @@ Money is stored as integer cents throughout.
 - `npm run db:generate` — generate a new migration after editing `src/db/schema.ts`
 - `npm run db:migrate` — apply migrations
 - `npm run db:studio` — open Drizzle Studio
+
+---
+## Temp
+
+- UI Reference: https://dribbble.com/shots/27532960-Finance-Mobile-App-UI-UX-Design
+
+todo
+- New feature
+  - Make Jiunn as paid by default
+  - Arrange player paid history by 3 months ago, 6 months ago, 9 months ago, more than 1 year ago; have tabs to filter by the year (gotta figure out UI, can't have to tabs)
+  - I need a page where I can find the players. (players who have all session paid for can't be found easily)
+  - add new session. rate and player names should come out immediately all the time. After some time, the player list refetches (what triggers it?)
+  - Add new session. How to handle players that are accidentally added?
+- Pages
+  - restyle the modal that opens up when a session is selected from a selected player, and vice versa
+- Deactivate players
+  - How should I treat sessions with unpaid deactivated players? Currently they are still shown there with a button to pay and badge of inactive
+  - how should I treat sessions with only one player which is unpaid but get's deactivated. 
+- Permanently delete players
+  - Give option for inactive player to be permanently deleted
+  - Deleted players should be removed from all session histories, including paid and unpaid. (affecting the total)
+  - How should I treat empty sessions. Sessions with only the player that got deleted.
+- Optimise
+  - Fetch the last-rate quicker
+  - What causes certain pages to reload again upon revisit?
+  - How to handle data fetching & rendering when we start having lots of data
+  - In player page, clicking "show inactive" causes the page to load (initial)... quite unecessary to refetch. just gotta do a quick filter. Also, it should it's own tab?
+  - clean the tab component to remove unused styles
+  - Fetch individual player and session data. opening each one takes sometime
+- Style
+  - The Player / Session secondary modal need a clear UI to indicate that this is just information, and cannot be selected.
+  - Persist scroll position. It works on dev but not on staging and prod
+  - Add an animated icon on the Home page to signify 'collect money now'
+  - Update Dark mode
+- Bug
+  - New session modal after keyboard is closed, modal doesn't adjust back down properly. Only way to get that behaviour is if the keyboard is manually closed
+  - Mark a player with multipe sessions as all paid, then undo one of them. The background will be transparent until another session is "undo" (same with sessions)

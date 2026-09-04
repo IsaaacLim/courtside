@@ -55,7 +55,7 @@ export function PlayerPreview({
 
   return (
     <Drawer open={!!player} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-[85vh]">
+      <DrawerContent className="h-[85vh] bg-background">
         <DrawerHeader className="text-left shrink-0">
           <DrawerTitle className="text-base">{player?.name ?? ""}</DrawerTitle>
         </DrawerHeader>
