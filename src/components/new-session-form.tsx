@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, DollarSign, Plus, Receipt, Search, Users } from "lucide-react";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import type { Player } from "@/db/schema";
@@ -18,14 +18,12 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import {
-  Item,
-  ItemGroup,
-  ItemContent,
-  ItemTitle,
-} from "@/components/ui/item";
+  ListCard,
+  ListRow,
+  ListRowAvatar,
+  ListRowCheckbox,
+} from "@/components/list-card";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 
 function toDateStr(d: Date): string {
@@ -79,6 +77,10 @@ export function NewSessionForm({
   const [rate, setRate] = useState(
     session ? (session.rate / 100).toString() : "",
   ); // dollar string
+  const [rateInvalid, setRateInvalid] = useState(false);
+  const rateInputRef = useRef<HTMLInputElement>(null);
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const [listScroll, setListScroll] = useState({ top: false, bottom: false });
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -143,15 +145,26 @@ export function NewSessionForm({
   );
   const canAddNew = search.trim().length > 0 && !exactExists;
 
+  function updateListScroll() {
+    const el = listScrollRef.current;
+    if (!el) return;
+    setListScroll({
+      top: el.scrollTop > 1,
+      bottom: el.scrollTop + el.clientHeight < el.scrollHeight - 1,
+    });
+  }
+
+  useEffect(() => {
+    updateListScroll();
+  }, [filtered.length, canAddNew]);
+
   async function submit() {
     setError("");
     const cents = parseDollarsToCents(rate);
     if (cents === null) {
-      setError("Enter a valid rate.");
-      return;
-    }
-    if (selected.size === 0) {
-      setError("Select at least one player.");
+      setRateInvalid(true);
+      rateInputRef.current?.focus();
+      rateInputRef.current?.select();
       return;
     }
     setSubmitting(true);
@@ -199,9 +212,9 @@ export function NewSessionForm({
               <Button
                 id="date"
                 variant="outline"
-                className="justify-start font-normal"
+                className="justify-start font-normal bg-raised"
               >
-                <CalendarIcon className="size-4" />
+                <CalendarIcon className="size-4 text-muted-foreground" />
                 {parseDateStr(date)
                   ? format(parseDateStr(date)!, "d MMM yyyy")
                   : "Pick a date"}
@@ -221,96 +234,144 @@ export function NewSessionForm({
           </Popover>
         </Field>
         <Field className="w-32">
-          <FieldLabel htmlFor="rate">Rate ($)</FieldLabel>
-          <Input
-            id="rate"
-            type="text"
-            inputMode="decimal"
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-            placeholder="10.00"
-          />
+          <FieldLabel htmlFor="rate">Rate</FieldLabel>
+          <div className="relative">
+            <DollarSign className="absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={rateInputRef}
+              id="rate"
+              type="text"
+              inputMode="decimal"
+              value={rate}
+              onChange={(e) => {
+                setRate(e.target.value);
+                setRateInvalid(false);
+              }}
+              placeholder="10.00"
+              aria-invalid={rateInvalid}
+              className="bg-raised pl-7"
+            />
+          </div>
         </Field>
       </div>
 
-      <div className="flex items-center justify-between shrink-0">
-        <Badge variant="secondary">{selected.size} selected</Badge>
-        {cents !== null && selected.size > 0 && (
-          <span className="text-sm text-muted-foreground">
-            Total {formatCents(cents * selected.size)}
-          </span>
-        )}
+      <div className="relative shrink-0">
+        <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search or add players"
+          className="h-8 rounded-full border pl-10 text-base"
+        />
       </div>
-
-      <Input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search or add a player"
-        className="shrink-0"
-      />
-
-      {canAddNew && (
-        <Button
-          variant="outline"
-          onClick={addAndSelect}
-          className="w-full justify-start border-dashed shrink-0"
-        >
-          <Plus className="size-4" />
-          Add &ldquo;{search.trim()}&rdquo; as a new player
-        </Button>
-      )}
 
       <div
         className={cn(
-          "overflow-y-auto rounded-xl border bg-muted/30 p-2",
+          "relative",
           fill ? "flex-1 min-h-0" : "h-[50vh]",
         )}
       >
-        {filtered.length === 0 ? (
-          <Empty className="py-10">
-            <EmptyHeader>
-              <EmptyTitle>No players</EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <ItemGroup>
-            {filtered.map((p) => {
-              const on = selected.has(p.id);
-              return (
-                <Item key={p.id} asChild variant={on ? "muted" : "outline"}>
-                  <label>
-                    <Checkbox
-                      checked={on}
-                      onCheckedChange={() => toggle(p.id)}
-                      className="size-5"
+        <div
+          ref={listScrollRef}
+          onScroll={updateListScroll}
+          className="h-full overflow-y-auto rounded-2xl"
+        >
+          {filtered.length === 0 && !canAddNew ? (
+            <Empty className="min-h-full border rounded-xl">
+              <EmptyHeader>
+                <EmptyTitle>No players yet</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <ListCard className="min-h-full shadow-none">
+              {canAddNew && (
+                <div
+                  role="button"
+                  onClick={addAndSelect}
+                  className="cursor-pointer select-none"
+                >
+                  <ListRow
+                    icon={
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Plus className="size-4" />
+                      </span>
+                    }
+                    title={
+                      <>
+                        Add &ldquo;{search.trim()}&rdquo; as a new player
+                      </>
+                    }
+                    className="w-full py-1.5"
+                  />
+                </div>
+              )}
+              {filtered.map((p) => {
+                const on = selected.has(p.id);
+                return (
+                  <div
+                    key={p.id}
+                    role="button"
+                    aria-pressed={on}
+                    onClick={() => toggle(p.id)}
+                    className={cn("cursor-pointer select-none", on && "bg-primary/5")}
+                  >
+                    <ListRow
+                      icon={<ListRowAvatar name={p.name} />}
+                      title={p.name}
+                      trailing={<ListRowCheckbox checked={on} />}
+                      className="w-full py-1.5"
                     />
-                    <ItemContent>
-                      <ItemTitle>{p.name}</ItemTitle>
-                    </ItemContent>
-                  </label>
-                </Item>
-              );
-            })}
-          </ItemGroup>
-        )}
+                  </div>
+                );
+              })}
+            </ListCard>
+          )}
+        </div>
+
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-x-0 top-0 h-8 rounded-t-2xl bg-linear-to-b from-black/4 to-transparent transition-opacity",
+            listScroll.top ? "opacity-100" : "opacity-0",
+          )}
+        />
+        <div
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-linear-to-t from-black/4 to-transparent transition-opacity",
+            listScroll.bottom ? "opacity-100" : "opacity-0",
+          )}
+        />
       </div>
 
       {error && (
         <p className="text-destructive text-sm shrink-0">{error}</p>
       )}
 
+      <div className="flex items-center justify-between shrink-0 px-1 text-sm">
+        <Receipt className="size-4 text-muted-foreground" />
+        <span className="font-semibold text-foreground tabular-nums">
+          Total {cents !== null ? formatCents(cents * selected.size) : formatCents(0)}
+        </span>
+      </div>
+
       <Button
         onClick={submit}
         disabled={submitting || selected.size === 0}
-        className="w-full h-11 text-base shrink-0"
+        className="w-full h-11 rounded-full text-base shadow-lg shrink-0"
       >
-        {editing
-          ? submitting
-            ? "Saving…"
-            : "Save changes"
-          : submitting
-            ? "Creating…"
-            : "Create session"}
+        {selected.size === 0 ? (
+          "Select players"
+        ) : submitting ? (
+          editing ? "Saving…" : "Creating…"
+        ) : (
+          <span className="flex items-center justify-center gap-1.5">
+            {editing ? "Save changes" : "Create session"}
+            <span className="opacity-60">·</span>
+            <Users className="size-4" />
+            {selected.size}
+          </span>
+        )}
       </Button>
     </div>
   );
