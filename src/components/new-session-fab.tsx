@@ -44,7 +44,7 @@ export function NewSessionFab() {
         <DrawerHeader className="text-left shrink-0">
           <DrawerTitle>New session</DrawerTitle>
         </DrawerHeader>
-        <div className="min-h-0 flex-1 px-4 pb-8">
+        <div className="min-h-0 flex-1 px-5 pb-5">
           <NewSessionForm fill onSuccess={() => setOpen(false)} />
         </div>
       </DrawerContent>
