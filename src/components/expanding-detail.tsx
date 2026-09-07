@@ -157,7 +157,7 @@ export function ExpandOverlay({
             }}
             className="fixed inset-0 z-50 overflow-y-auto"
           >
-            <div className="mx-auto max-w-2xl space-y-4 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <div className="mx-auto max-w-2xl space-y-4 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               {children}
             </div>
           </motion.div>
@@ -176,7 +176,7 @@ export function ExpandBackBar({
   actions?: ReactNode;
 }) {
   return (
-    <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-background px-4 pt-3 pb-2">
+    <div className="sticky top-0 z-10 -mx-5 flex items-center justify-between bg-background px-5 pt-3 pb-2">
       <RoundIconButton aria-label="Back" onClick={onBack}>
         <ChevronLeft className="size-5" />
       </RoundIconButton>

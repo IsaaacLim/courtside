@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, EllipsisVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, EllipsisVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useAttendanceMutations } from "@/lib/use-attendance-mutations";
 import { formatCents } from "@/lib/money";
 import { formatDate } from "@/lib/date";
-import { ExpandBackBar } from "@/components/expanding-detail";
 import { NewSessionForm } from "@/components/new-session-form";
 import { PlayerPreview } from "@/components/player-preview";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
@@ -137,36 +136,38 @@ export function SessionDetail({
 
   return (
     <>
-      <ExpandBackBar
-        onBack={onBack}
-        actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <RoundIconButton aria-label="Session actions">
-                <EllipsisVertical className="size-5" />
-              </RoundIconButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => setEditOpen(true)}>
-                <Pencil className="size-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() => setConfirmOpen(true)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="size-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
-      />
+      <div className="sticky top-0 z-10 -mx-5 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 bg-background px-5 pt-6 pb-8">
+        <RoundIconButton aria-label="Back" onClick={onBack}>
+          <ChevronLeft className="size-5" />
+        </RoundIconButton>
+        <h1 className="truncate text-center text-lg font-bold">
+          {formatDate(session.date)}
+        </h1>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <RoundIconButton aria-label="Session actions">
+              <EllipsisVertical className="size-5" />
+            </RoundIconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+              <Pencil className="size-4" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => setConfirmOpen(true)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="size-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-      {/* Header: session date + amount due. */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-2xl font-bold">{formatDate(session.date)}</span>
+      {/* Amount due for this session. */}
+      <div className="flex items-center justify-center">
         <Badge
           variant={outstanding > 0 ? "destructive" : "secondary"}
           className="text-sm"

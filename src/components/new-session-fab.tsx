@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Plus } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { cn } from "@/lib/utils";
-import { ExpandBackBar } from "@/components/expanding-detail";
 import { NewSessionForm } from "@/components/new-session-form";
 import { useBackDismiss } from "@/lib/use-back-dismiss";
 
@@ -57,9 +57,12 @@ export function NewSessionFab() {
             exit={{ opacity: 0, y: 16, transition: { duration: 0.15, ease: "easeIn" } }}
             className="fixed inset-0 z-50 flex flex-col bg-background"
           >
-            <div className="shrink-0 px-5">
-              <ExpandBackBar onBack={close} />
-              <h1 className="pb-2 text-xl font-bold">New session</h1>
+            <div className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 px-5 pt-6 pb-8">
+              <RoundIconButton aria-label="Back" onClick={close}>
+                <ChevronLeft className="size-5" />
+              </RoundIconButton>
+              <h1 className="text-center text-lg font-bold">New session</h1>
+              <div aria-hidden />
             </div>
             <div className="min-h-0 flex-1 px-5 pb-5">
               <NewSessionForm fill onSuccess={close} />

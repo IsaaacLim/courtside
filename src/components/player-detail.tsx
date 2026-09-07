@@ -1,13 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowUpRight, EllipsisVertical, Pencil } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, EllipsisVertical, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useAttendanceMutations } from "@/lib/use-attendance-mutations";
 import { formatDate } from "@/lib/date";
-import { ExpandBackBar } from "@/components/expanding-detail";
 import { SessionPreview } from "@/components/session-preview";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import {
@@ -113,31 +112,30 @@ export function PlayerDetail({
 
   return (
     <>
-      <ExpandBackBar
-        onBack={onBack}
-        actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <RoundIconButton aria-label="Player actions">
-                <EllipsisVertical className="size-5" />
-              </RoundIconButton>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => {
-                  setNameInput(displayName);
-                  setEditOpen(true);
-                }}
-              >
-                <Pencil className="size-4" />
-                Edit
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
-      />
-
-      <h1 className="text-2xl font-bold">{displayName}</h1>
+      <div className="sticky top-0 z-10 -mx-5 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 bg-background px-5 pt-6 pb-8">
+        <RoundIconButton aria-label="Back" onClick={onBack}>
+          <ChevronLeft className="size-5" />
+        </RoundIconButton>
+        <h1 className="truncate text-center text-lg font-bold">{displayName}</h1>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <RoundIconButton aria-label="Player actions">
+              <EllipsisVertical className="size-5" />
+            </RoundIconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onSelect={() => {
+                setNameInput(displayName);
+                setEditOpen(true);
+              }}
+            >
+              <Pencil className="size-4" />
+              Edit
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <OutstandingCard
         outstanding={outstanding}
