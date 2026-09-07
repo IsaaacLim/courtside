@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronLeft } from "lucide-react";
+import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { useBackDismiss } from "@/lib/use-back-dismiss";
 import { cn } from "@/lib/utils";
 
@@ -177,9 +177,9 @@ export function ExpandBackBar({
 }) {
   return (
     <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between bg-background px-4 pt-3 pb-2">
-      <Button variant="ghost" size="sm" onClick={onBack} className="px-0">
-        <ArrowLeft className="size-6" />
-      </Button>
+      <RoundIconButton aria-label="Back" onClick={onBack}>
+        <ChevronLeft className="size-5" />
+      </RoundIconButton>
       {actions}
     </div>
   );

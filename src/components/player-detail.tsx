@@ -9,6 +9,7 @@ import { useAttendanceMutations } from "@/lib/use-attendance-mutations";
 import { formatDate } from "@/lib/date";
 import { ExpandBackBar } from "@/components/expanding-detail";
 import { SessionPreview } from "@/components/session-preview";
+import { RoundIconButton } from "@/components/ui/round-icon-button";
 import {
   Dialog,
   DialogContent,
@@ -117,14 +118,9 @@ export function PlayerDetail({
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Player actions"
-                className="px-0"
-              >
-                <EllipsisVertical className="size-6" />
-              </Button>
+              <RoundIconButton aria-label="Player actions">
+                <EllipsisVertical className="size-5" />
+              </RoundIconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem

@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/date";
 import { ExpandBackBar } from "@/components/expanding-detail";
 import { NewSessionForm } from "@/components/new-session-form";
 import { PlayerPreview } from "@/components/player-preview";
+import { RoundIconButton } from "@/components/ui/round-icon-button";
 import {
   Drawer,
   DrawerContent,
@@ -141,14 +142,9 @@ export function SessionDetail({
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Session actions"
-                className="px-0"
-              >
-                <EllipsisVertical className="size-6" />
-              </Button>
+              <RoundIconButton aria-label="Session actions">
+                <EllipsisVertical className="size-5" />
+              </RoundIconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setEditOpen(true)}>
