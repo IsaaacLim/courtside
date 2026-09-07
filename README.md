@@ -88,8 +88,6 @@ todo
   - I need a page where I can find the players. (players who have all session paid for can't be found easily)
   - add new session. rate and player names should come out immediately all the time. After some time, the player list refetches (what triggers it?)
   - Add new session. How to handle players that are accidentally added?
-- Pages
-  - restyle the modal that opens up when a session is selected from a selected player, and vice versa
 - Deactivate players
   - How should I treat sessions with unpaid deactivated players? Currently they are still shown there with a button to pay and badge of inactive
   - how should I treat sessions with only one player which is unpaid but get's deactivated. 
@@ -109,5 +107,4 @@ todo
   - Persist scroll position. It works on dev but not on staging and prod
   - Add an animated icon on the Home page to signify 'collect money now'
 - Bug
-  - New session modal after keyboard is closed, modal doesn't adjust back down properly. Only way to get that behaviour is if the keyboard is manually closed
   - Mark a player with multipe sessions as all paid, then undo one of them. The background will be transparent until another session is "undo" (same with sessions)
