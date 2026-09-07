@@ -176,7 +176,7 @@ export function ExpandBackBar({
   actions?: ReactNode;
 }) {
   return (
-    <div className="sticky top-0 z-10 -mx-5 flex items-center justify-between bg-background px-5 pt-3 pb-2">
+    <div className="sticky top-0 z-10 -mx-5 flex items-center justify-between bg-background px-5 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-2">
       <RoundIconButton aria-label="Back" onClick={onBack}>
         <ChevronLeft className="size-5" />
       </RoundIconButton>

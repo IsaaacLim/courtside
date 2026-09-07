@@ -112,7 +112,7 @@ export function PlayerDetail({
 
   return (
     <>
-      <div className="sticky top-0 z-10 -mx-5 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 bg-background px-5 pt-6 pb-8">
+      <div className="sticky top-0 z-10 -mx-5 grid grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 bg-background px-5 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-4">
         <RoundIconButton aria-label="Back" onClick={onBack}>
           <ChevronLeft className="size-5" />
         </RoundIconButton>

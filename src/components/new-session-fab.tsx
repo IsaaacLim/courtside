@@ -57,14 +57,14 @@ export function NewSessionFab() {
             exit={{ opacity: 0, y: 16, transition: { duration: 0.15, ease: "easeIn" } }}
             className="fixed inset-0 z-50 flex flex-col bg-background"
           >
-            <div className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 px-5 pt-6 pb-8">
+            <div className="grid shrink-0 grid-cols-[2.5rem_1fr_2.5rem] items-center gap-2 px-5 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-8">
               <RoundIconButton aria-label="Back" onClick={close}>
                 <ChevronLeft className="size-5" />
               </RoundIconButton>
               <h1 className="text-center text-lg font-bold">New session</h1>
               <div aria-hidden />
             </div>
-            <div className="min-h-0 flex-1 px-5 pb-5">
+            <div className="min-h-0 flex-1 px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
               <NewSessionForm fill onSuccess={close} />
             </div>
           </motion.div>

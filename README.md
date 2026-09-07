@@ -108,7 +108,6 @@ todo
   - The Player / Session secondary modal need a clear UI to indicate that this is just information, and cannot be selected.
   - Persist scroll position. It works on dev but not on staging and prod
   - Add an animated icon on the Home page to signify 'collect money now'
-  - Update Dark mode
 - Bug
   - New session modal after keyboard is closed, modal doesn't adjust back down properly. Only way to get that behaviour is if the keyboard is manually closed
   - Mark a player with multipe sessions as all paid, then undo one of them. The background will be transparent until another session is "undo" (same with sessions)
