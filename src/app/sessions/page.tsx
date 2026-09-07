@@ -6,7 +6,7 @@ import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
 import { prefetch } from "@/lib/prefetch";
 import { formatCents } from "@/lib/money";
-import { formatDate } from "@/lib/date";
+import { formatDate, quarterLabel } from "@/lib/date";
 import { PageHeader } from "@/components/page-header";
 import {
   ExpandOverlay,
@@ -20,6 +20,26 @@ import { CenteredSpinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { User, Users } from "lucide-react";
+
+// Groups sessions by quarter, preserving the order they're first seen in
+// (the API returns them newest first, so groups come out newest first too).
+function groupByQuarter(
+  sessions: SessionSummary[],
+): { label: string; sessions: SessionSummary[] }[] {
+  const groups: { label: string; sessions: SessionSummary[] }[] = [];
+  const byLabel = new Map<string, SessionSummary[]>();
+  for (const s of sessions) {
+    const label = quarterLabel(s.date);
+    let group = byLabel.get(label);
+    if (!group) {
+      group = [];
+      byLabel.set(label, group);
+      groups.push({ label, sessions: group });
+    }
+    group.push(s);
+  }
+  return groups;
+}
 
 function SessionList({
   sessions,
@@ -40,42 +60,49 @@ function SessionList({
     );
   }
   return (
-    <ListCard>
-      {sessions.map((s) => (
-        <ExpandTrigger
-          key={s.id}
-          layoutId={`session-${s.id}`}
-          nudge={nudge}
-          onOpen={(y) => onOpen(s, y)}
-          onPrefetch={() => prefetch(`/api/attendances?sessionId=${s.id}`)}
-          surfaceClassName="border-transparent bg-card"
-          className="rounded-none p-0"
-        >
-          <ListRow
-            icon={
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                {s.total === 1 ? (
-                  <User className="size-4" />
-                ) : (
-                  <Users className="size-4" />
-                )}
-              </div>
-            }
-            title={formatDate(s.date)}
-            subtitle={`${formatCents(s.rate)} · ${s.total} ${s.total === 1 ? "player" : "players"}`}
-            trailing={
-              s.unpaid > 0 ? (
-                <Badge variant="destructive">{s.unpaid} unpaid</Badge>
-              ) : (
-                <Badge variant="secondary">Paid</Badge>
-              )
-            }
-            chevron
-            className="w-full"
-          />
-        </ExpandTrigger>
+    <div className="space-y-6">
+      {groupByQuarter(sessions).map((group) => (
+        <div key={group.label}>
+          <h2 className="mb-3 text-base font-semibold">{group.label}</h2>
+          <ListCard>
+            {group.sessions.map((s) => (
+              <ExpandTrigger
+                key={s.id}
+                layoutId={`session-${s.id}`}
+                nudge={nudge}
+                onOpen={(y) => onOpen(s, y)}
+                onPrefetch={() => prefetch(`/api/attendances?sessionId=${s.id}`)}
+                surfaceClassName="border-transparent bg-card"
+                className="rounded-none p-0"
+              >
+                <ListRow
+                  icon={
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                      {s.total === 1 ? (
+                        <User className="size-4" />
+                      ) : (
+                        <Users className="size-4" />
+                      )}
+                    </div>
+                  }
+                  title={formatDate(s.date)}
+                  subtitle={`${formatCents(s.rate)} · ${s.total} ${s.total === 1 ? "player" : "players"}`}
+                  trailing={
+                    s.unpaid > 0 ? (
+                      <Badge variant="destructive">{s.unpaid} unpaid</Badge>
+                    ) : (
+                      <Badge variant="secondary">Paid</Badge>
+                    )
+                  }
+                  chevron
+                  className="w-full"
+                />
+              </ExpandTrigger>
+            ))}
+          </ListCard>
+        </div>
       ))}
-    </ListCard>
+    </div>
   );
 }
 
