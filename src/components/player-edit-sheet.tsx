@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Check, Merge, Pencil, Search, Trash2, TriangleAlert } from "lucide-react";
 import { useBackDismiss } from "@/lib/use-back-dismiss";
 import type { Player } from "@/db/schema";
@@ -74,6 +75,53 @@ export function DeleteMessage({ p }: { p: PlayerRow }) {
 }
 
 type Mode = "menu" | "rename" | "merge";
+type Nav = { mode: Mode; direction: 1 | -1 };
+
+const SLIDE_TRANSITION = { duration: 0.22, ease: "easeInOut" } as const;
+
+// +1 (menu -> a subview) slides the incoming view in from the right and the
+// outgoing one out to the left; -1 (subview -> menu) is the mirror of that.
+const slideVariants = {
+  enter: (direction: 1 | -1) => ({ x: direction > 0 ? 24 : -24, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (direction: 1 | -1) => ({ x: direction > 0 ? -24 : 24, opacity: 0 }),
+};
+
+// Reports its rendered height to the parent so the sheet can animate a real
+// `height` change (a reflow) instead of Motion's transform-based `layout`
+// resize, which scales the whole subtree and visibly stretches/squishes
+// plain (non-motion) children like text and icons mid-transition.
+function MeasuredPanel({
+  onHeight,
+  className,
+  children,
+}: {
+  onHeight: (height: number) => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // Re-measure with getBoundingClientRect on every callback rather than
+    // trusting ResizeObserver's own entry: entry.contentRect is the
+    // content box only (excludes this element's bottom padding), which
+    // under-reports the height by exactly that padding.
+    const report = () => onHeight(el.getBoundingClientRect().height);
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onHeight]);
+
+  return (
+    <div ref={ref} className={className}>
+      {children}
+    </div>
+  );
+}
 
 /**
  * Bottom sheet opened by tapping a player row on /players. Consolidates
@@ -104,10 +152,16 @@ export function PlayerEditSheet({
   // effect, so a newly-opened player's content is correct on the very first
   // render instead of one tick later.
   const [displayPlayer, setDisplayPlayer] = useState<PlayerRow | null>(player);
-  const [mode, setMode] = useState<Mode>("menu");
+  const [nav, setNav] = useState<Nav>({ mode: "menu", direction: 1 });
+  const [height, setHeight] = useState<number>();
   if (player && player !== displayPlayer) {
     setDisplayPlayer(player);
-    setMode("menu");
+    setNav({ mode: "menu", direction: 1 });
+  }
+  const mode = nav.mode;
+
+  function go(mode: Mode, direction: 1 | -1) {
+    setNav({ mode, direction });
   }
 
   const [renameValue, setRenameValue] = useState("");
@@ -126,7 +180,7 @@ export function PlayerEditSheet({
 
   function openRename() {
     setRenameValue(displayPlayer?.name ?? "");
-    setMode("rename");
+    go("rename", 1);
   }
 
   async function saveRename() {
@@ -141,7 +195,7 @@ export function PlayerEditSheet({
   function openMerge() {
     setMergeSearch("");
     setMergeTargetId(null);
-    setMode("merge");
+    go("merge", 1);
   }
 
   const mergeOthers = displayPlayer
@@ -179,148 +233,176 @@ export function PlayerEditSheet({
             </DrawerTitle>
           </DrawerHeader>
 
-          <div className="px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-            {mode === "menu" && (
-              <ListCard>
-                <div role="button" onClick={openRename} className="cursor-pointer select-none">
-                  <ListRow
-                    icon={
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-                        <Pencil className="size-4" />
-                      </div>
-                    }
-                    title="Rename"
-                    chevron
-                    className="w-full py-2.5"
-                  />
-                </div>
-                <div role="button" onClick={openMerge} className="cursor-pointer select-none">
-                  <ListRow
-                    icon={
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-                        <Merge className="size-4" />
-                      </div>
-                    }
-                    title="Merge into another player"
-                    chevron
-                    className="w-full py-2.5"
-                  />
-                </div>
-                <div
-                  role="button"
-                  onClick={() => setDeleteConfirmOpen(true)}
-                  className="cursor-pointer select-none"
+          <div
+            key={displayPlayer?.id}
+            style={{
+              // CSS transition shorthand needs the CSS keyword ("ease-in-out"),
+              // not Motion's JS easing name ("easeInOut") — the browser
+              // silently drops the whole declaration if it's invalid, which
+              // makes the height snap instead of animating.
+              height,
+              transition: `height ${SLIDE_TRANSITION.duration}s ease-in-out`,
+            }}
+            className="relative overflow-hidden"
+          >
+            <AnimatePresence initial={false} custom={nav.direction} mode="popLayout">
+              <motion.div
+                key={mode}
+                custom={nav.direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={SLIDE_TRANSITION}
+              >
+                <MeasuredPanel
+                  onHeight={setHeight}
+                  className="px-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]"
                 >
-                  <ListRow
-                    icon={
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-                        <Trash2 className="size-4" />
-                      </div>
-                    }
-                    title={<span className="text-destructive">Delete</span>}
-                    className="w-full py-2.5"
-                  />
-                </div>
-              </ListCard>
-            )}
-
-            {mode === "rename" && (
-              <div className="space-y-4">
-                <Input
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  autoFocus
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11"
-                    onClick={() => setMode("menu")}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    className="h-11"
-                    disabled={!renameValue.trim()}
-                    onClick={saveRename}
-                  >
-                    Save
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {mode === "merge" && (
-              <div className="space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={mergeSearch}
-                    onChange={(e) => setMergeSearch(e.target.value)}
-                    placeholder="Search players"
-                    className="h-8 rounded-full border pl-10 text-base"
-                    autoFocus
-                  />
-                </div>
-                {filteredOthers.length === 0 ? (
-                  <Empty className="border rounded-xl py-8">
-                    <EmptyHeader>
-                      <EmptyTitle>
-                        {mergeOthers.length === 0
-                          ? "No other players to merge into"
-                          : "No matches"}
-                      </EmptyTitle>
-                    </EmptyHeader>
-                  </Empty>
-                ) : (
-                  <div className="max-h-[45vh] overflow-y-auto rounded-2xl">
-                    <ListCard className="shadow-none">
-                      {filteredOthers.map((p) => {
-                        const on = p.id === mergeTargetId;
-                        return (
-                          <div
-                            key={p.id}
-                            role="button"
-                            aria-pressed={on}
-                            onClick={() => setMergeTargetId(p.id)}
-                            className={cn("cursor-pointer select-none", on && "bg-primary/5")}
-                          >
-                            <ListRow
-                              icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
-                              title={p.name}
-                              trailing={
-                                on ? <Check className="size-4 text-primary" /> : undefined
-                              }
-                              className="w-full py-1.5"
-                            />
+                {mode === "menu" && (
+                  <ListCard>
+                    <div role="button" onClick={openRename} className="cursor-pointer select-none">
+                      <ListRow
+                        icon={
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                            <Pencil className="size-4" />
                           </div>
-                        );
-                      })}
-                    </ListCard>
+                        }
+                        title="Rename"
+                        chevron
+                        className="w-full py-2.5"
+                      />
+                    </div>
+                    <div role="button" onClick={openMerge} className="cursor-pointer select-none">
+                      <ListRow
+                        icon={
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                            <Merge className="size-4" />
+                          </div>
+                        }
+                        title="Merge into another player"
+                        chevron
+                        className="w-full py-2.5"
+                      />
+                    </div>
+                    <div
+                      role="button"
+                      onClick={() => setDeleteConfirmOpen(true)}
+                      className="cursor-pointer select-none"
+                    >
+                      <ListRow
+                        icon={
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                            <Trash2 className="size-4" />
+                          </div>
+                        }
+                        title={<span className="text-destructive">Delete</span>}
+                        className="w-full py-2.5"
+                      />
+                    </div>
+                  </ListCard>
+                )}
+
+                {mode === "rename" && (
+                  <div className="space-y-4">
+                    <Input
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      autoFocus
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        onClick={() => go("menu", -1)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        className="h-11"
+                        disabled={!renameValue.trim()}
+                        onClick={saveRename}
+                      >
+                        Save
+                      </Button>
+                    </div>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11"
-                    onClick={() => setMode("menu")}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="button"
-                    className="h-11"
-                    disabled={!mergeTarget}
-                    onClick={() => setMergeConfirmOpen(true)}
-                  >
-                    Merge…
-                  </Button>
-                </div>
-              </div>
-            )}
+
+                {mode === "merge" && (
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={mergeSearch}
+                        onChange={(e) => setMergeSearch(e.target.value)}
+                        placeholder="Search players"
+                        className="h-8 rounded-full border pl-10 text-base"
+                        autoFocus
+                      />
+                    </div>
+                    {filteredOthers.length === 0 ? (
+                      <Empty className="border rounded-xl py-8">
+                        <EmptyHeader>
+                          <EmptyTitle>
+                            {mergeOthers.length === 0
+                              ? "No other players to merge into"
+                              : "No matches"}
+                          </EmptyTitle>
+                        </EmptyHeader>
+                      </Empty>
+                    ) : (
+                      <div className="max-h-[45vh] overflow-y-auto rounded-2xl">
+                        <ListCard className="shadow-none">
+                          {filteredOthers.map((p) => {
+                            const on = p.id === mergeTargetId;
+                            return (
+                              <div
+                                key={p.id}
+                                role="button"
+                                aria-pressed={on}
+                                onClick={() => setMergeTargetId(p.id)}
+                                className={cn("cursor-pointer select-none", on && "bg-primary/5")}
+                              >
+                                <ListRow
+                                  icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
+                                  title={p.name}
+                                  trailing={
+                                    on ? <Check className="size-4 text-primary" /> : undefined
+                                  }
+                                  className="w-full py-1.5"
+                                />
+                              </div>
+                            );
+                          })}
+                        </ListCard>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        onClick={() => go("menu", -1)}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        className="h-11"
+                        disabled={!mergeTarget}
+                        onClick={() => setMergeConfirmOpen(true)}
+                      >
+                        Merge
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </MeasuredPanel>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </DrawerContent>
       </Drawer>
