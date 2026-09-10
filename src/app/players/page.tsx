@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Info } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
@@ -12,8 +11,6 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
 import { ListCard, ListRow, ListRowAvatar } from "@/components/list-card";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -45,17 +42,21 @@ import {
 
 type PlayerRow = Player & { owed: number };
 
+// TEMPORARY: the roster still has inactive players left over from the old
+// deactivate feature. Show them here so they can be reviewed and hard
+// deleted. Once the roster is clean, delete this constant and the
+// `includeInactive` query param (in both this file and the API route) —
+// there's no more "inactive" state to show once deactivate is gone for good.
+const SHOW_INACTIVE_PLAYERS = true;
+
 export default function PlayersPage() {
   useScrollRestoration();
-  const [includeInactive, setIncludeInactive] = useState(false);
-  const key = `/api/players?includeInactive=${includeInactive ? "1" : "0"}`;
+  const key = `/api/players?includeInactive=${SHOW_INACTIVE_PLAYERS ? "1" : "0"}`;
   const { data, isLoading } = useTrackedSWR<{ players: PlayerRow[] }>(key);
   const players = data?.players ?? [];
   const [newName, setNewName] = useState("");
-  // Player pending deactivation while they still owe (warning dialog).
-  const [deactivateTarget, setDeactivateTarget] = useState<PlayerRow | null>(
-    null,
-  );
+  // Player pending hard delete (confirmation dialog).
+  const [deleteTarget, setDeleteTarget] = useState<PlayerRow | null>(null);
 
   // Rename dialog state.
   const [renameTarget, setRenameTarget] = useState<Player | null>(null);
@@ -102,29 +103,14 @@ export default function PlayersPage() {
     mutate(() => true);
   }
 
-  async function applyActive(p: PlayerRow, active: boolean) {
-    await fetch(`/api/players/${p.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ active }),
-    });
+  async function doDelete() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    await fetch(`/api/players/${target.id}`, { method: "DELETE" });
     mutate(key);
-    mutate("/api/overview"); // overview hides/shows this player
-    toast.success(active ? `${p.name} reactivated` : `${p.name} deactivated`);
-  }
-
-  function toggleActive(p: PlayerRow) {
-    // Warn before deactivating someone who still owes.
-    if (p.active && p.owed > 0) {
-      setDeactivateTarget(p);
-      return;
-    }
-    applyActive(p, !p.active);
-  }
-
-  function confirmDeactivate() {
-    if (deactivateTarget) applyActive(deactivateTarget, false);
-    setDeactivateTarget(null);
+    mutate("/api/overview");
+    toast.success(`${target.name} deleted`);
   }
 
   const mergeTarget =
@@ -166,14 +152,6 @@ export default function PlayersPage() {
           Add
         </Button>
       </form>
-
-      <Label className="flex items-center gap-2 text-muted-foreground font-normal">
-        <Checkbox
-          checked={includeInactive}
-          onCheckedChange={(c) => setIncludeInactive(c === true)}
-        />
-        Show inactive
-      </Label>
 
       {isLoading ? (
         <div className="flex justify-center py-16">
@@ -218,10 +196,10 @@ export default function PlayersPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-muted-foreground"
-                    onClick={() => toggleActive(p)}
+                    className="text-destructive"
+                    onClick={() => setDeleteTarget(p)}
                   >
-                    {p.active ? "Deactivate" : "Reactivate"}
+                    Delete
                   </Button>
                 </ButtonGroup>
               }
@@ -341,42 +319,34 @@ export default function PlayersPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Deactivate warning when the player still owes */}
-      <Dialog
-        open={deactivateTarget !== null}
-        onOpenChange={(o) => !o && setDeactivateTarget(null)}
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {deactivateTarget?.name} still owes{" "}
-              {formatCents(deactivateTarget?.owed ?? 0)}
-            </DialogTitle>
-            <DialogDescription>
-              Deactivating removes them from the overview — including the{" "}
-              {formatCents(deactivateTarget?.owed ?? 0)} they still owe. Please
-              settle this before moving forward.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex items-start gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            <Info className="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              You can reactivate them anytime to bring them (and their balance)
-              back.
-            </span>
-          </div>
-
-          <DialogFooter>
-            <Button
-              onClick={confirmDeactivate}
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes {deleteTarget?.name} and all of their
+              session attendances
+              {deleteTarget && deleteTarget.owed > 0
+                ? `, including the ${formatCents(deleteTarget.owed)} they still owe`
+                : ""}
+              . This can&rsquo;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={doDelete}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
-              Deactivate anyway
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

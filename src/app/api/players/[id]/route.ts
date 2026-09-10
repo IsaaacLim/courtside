@@ -90,3 +90,24 @@ export async function PATCH(
   await bumpVersion();
   return NextResponse.json({ player: row });
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id: idStr } = await params;
+  const id = Number(idStr);
+  if (!Number.isInteger(id)) {
+    return NextResponse.json({ error: "bad id" }, { status: 400 });
+  }
+
+  // Foreign keys aren't enforced, so drop attendances explicitly rather than
+  // relying on the schema's onDelete: "cascade" to do it.
+  await db.delete(attendances).where(eq(attendances.playerId, id));
+  const [row] = await db.delete(players).where(eq(players.id, id)).returning();
+  if (!row) {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+  await bumpVersion();
+  return NextResponse.json({ ok: true });
+}
