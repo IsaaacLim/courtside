@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, Merge, Pencil, Search, Trash2, TriangleAlert } from "lucide-react";
 import { useBackDismiss } from "@/lib/use-back-dismiss";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ListCard, ListRow, ListRowAvatar } from "@/components/list-card";
+import { ScrollShadowList } from "@/components/scroll-shadow-list";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import {
   Drawer,
@@ -169,8 +170,6 @@ export function PlayerEditSheet({
   const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
   const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const mergeListRef = useRef<HTMLDivElement>(null);
-  const [mergeListScroll, setMergeListScroll] = useState({ top: false, bottom: false });
 
   // These confirm dialogs are separate Radix Dialog roots stacked on top of
   // the sheet's own Drawer, so the back button needs its own dismiss layer
@@ -207,19 +206,6 @@ export function PlayerEditSheet({
     p.name.toLowerCase().includes(mergeSearch.trim().toLowerCase()),
   );
   const mergeTarget = mergeOthers.find((p) => p.id === mergeTargetId) ?? null;
-
-  function updateMergeListScroll() {
-    const el = mergeListRef.current;
-    if (!el) return;
-    setMergeListScroll({
-      top: el.scrollTop > 1,
-      bottom: el.scrollTop + el.clientHeight < el.scrollHeight - 1,
-    });
-  }
-
-  useEffect(() => {
-    updateMergeListScroll();
-  }, [filteredOthers.length]);
 
   async function confirmMerge() {
     if (!displayPlayer || !mergeTarget) return;
@@ -369,51 +355,34 @@ export function PlayerEditSheet({
                         </EmptyHeader>
                       </Empty>
                     ) : (
-                      <div className="relative">
-                        <div
-                          ref={mergeListRef}
-                          onScroll={updateMergeListScroll}
-                          className="max-h-[45vh] overflow-y-auto rounded-2xl"
-                        >
-                          <ListCard className="shadow-none">
-                            {filteredOthers.map((p) => {
-                              const on = p.id === mergeTargetId;
-                              return (
-                                <div
-                                  key={p.id}
-                                  role="button"
-                                  aria-pressed={on}
-                                  onClick={() => setMergeTargetId(p.id)}
-                                  className={cn("cursor-pointer select-none", on && "bg-primary/5")}
-                                >
-                                  <ListRow
-                                    icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
-                                    title={p.name}
-                                    trailing={
-                                      on ? <Check className="size-4 text-primary" /> : undefined
-                                    }
-                                    className="w-full py-1.5"
-                                  />
-                                </div>
-                              );
-                            })}
-                          </ListCard>
-                        </div>
-                        <div
-                          aria-hidden
-                          className={cn(
-                            "pointer-events-none absolute inset-x-0 top-0 h-8 rounded-t-2xl bg-linear-to-b from-black/4 to-transparent transition-opacity",
-                            mergeListScroll.top ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                        <div
-                          aria-hidden
-                          className={cn(
-                            "pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-linear-to-t from-black/4 to-transparent transition-opacity",
-                            mergeListScroll.bottom ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                      </div>
+                      <ScrollShadowList
+                        scrollClassName="max-h-[45vh]"
+                        scrollDeps={[filteredOthers.length]}
+                      >
+                        <ListCard className="shadow-none">
+                          {filteredOthers.map((p) => {
+                            const on = p.id === mergeTargetId;
+                            return (
+                              <div
+                                key={p.id}
+                                role="button"
+                                aria-pressed={on}
+                                onClick={() => setMergeTargetId(p.id)}
+                                className={cn("cursor-pointer select-none", on && "bg-primary/5")}
+                              >
+                                <ListRow
+                                  icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
+                                  title={p.name}
+                                  trailing={
+                                    on ? <Check className="size-4 text-primary" /> : undefined
+                                  }
+                                  className="w-full py-1.5"
+                                />
+                              </div>
+                            );
+                          })}
+                        </ListCard>
+                      </ScrollShadowList>
                     )}
                     <div className="grid grid-cols-2 gap-2">
                       <Button

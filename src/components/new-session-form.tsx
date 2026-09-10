@@ -25,6 +25,7 @@ import {
   ListRowCheckbox,
 } from "@/components/list-card";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { ScrollShadowList } from "@/components/scroll-shadow-list";
 
 function toDateStr(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -79,8 +80,6 @@ export function NewSessionForm({
   ); // dollar string
   const [rateInvalid, setRateInvalid] = useState(false);
   const rateInputRef = useRef<HTMLInputElement>(null);
-  const listScrollRef = useRef<HTMLDivElement>(null);
-  const [listScroll, setListScroll] = useState({ top: false, bottom: false });
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -144,19 +143,6 @@ export function NewSessionForm({
     (p) => p.name.toLowerCase() === search.trim().toLowerCase(),
   );
   const canAddNew = search.trim().length > 0 && !exactExists;
-
-  function updateListScroll() {
-    const el = listScrollRef.current;
-    if (!el) return;
-    setListScroll({
-      top: el.scrollTop > 1,
-      bottom: el.scrollTop + el.clientHeight < el.scrollHeight - 1,
-    });
-  }
-
-  useEffect(() => {
-    updateListScroll();
-  }, [filtered.length, canAddNew]);
 
   async function submit() {
     setError("");
@@ -265,84 +251,62 @@ export function NewSessionForm({
         />
       </div>
 
-      <div
-        className={cn(
-          "relative",
-          fill ? "flex-1 min-h-0" : "h-[50vh]",
-        )}
+      <ScrollShadowList
+        containerClassName={fill ? "flex-1 min-h-0" : "h-[50vh]"}
+        scrollClassName="h-full"
+        scrollDeps={[filtered.length, canAddNew]}
       >
-        <div
-          ref={listScrollRef}
-          onScroll={updateListScroll}
-          className="h-full overflow-y-auto rounded-2xl"
-        >
-          {filtered.length === 0 && !canAddNew ? (
-            <Empty className="min-h-full border rounded-xl">
-              <EmptyHeader>
-                <EmptyTitle>No players yet</EmptyTitle>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <ListCard className="min-h-full shadow-none">
-              {canAddNew && (
+        {filtered.length === 0 && !canAddNew ? (
+          <Empty className="min-h-full border rounded-xl">
+            <EmptyHeader>
+              <EmptyTitle>No players yet</EmptyTitle>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <ListCard className="min-h-full shadow-none">
+            {canAddNew && (
+              <div
+                role="button"
+                onClick={addAndSelect}
+                className="cursor-pointer select-none"
+              >
+                <ListRow
+                  icon={
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Plus className="size-4" />
+                    </span>
+                  }
+                  title={
+                    <>
+                      Add &ldquo;{search.trim()}&rdquo; as a new player
+                    </>
+                  }
+                  className="w-full py-1.5"
+                />
+              </div>
+            )}
+            {filtered.map((p) => {
+              const on = selected.has(p.id);
+              return (
                 <div
+                  key={p.id}
                   role="button"
-                  onClick={addAndSelect}
-                  className="cursor-pointer select-none"
+                  aria-pressed={on}
+                  onClick={() => toggle(p.id)}
+                  className={cn("cursor-pointer select-none", on && "bg-primary/5")}
                 >
                   <ListRow
-                    icon={
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <Plus className="size-4" />
-                      </span>
-                    }
-                    title={
-                      <>
-                        Add &ldquo;{search.trim()}&rdquo; as a new player
-                      </>
-                    }
+                    icon={<ListRowAvatar name={p.name} />}
+                    title={p.name}
+                    trailing={<ListRowCheckbox checked={on} />}
                     className="w-full py-1.5"
                   />
                 </div>
-              )}
-              {filtered.map((p) => {
-                const on = selected.has(p.id);
-                return (
-                  <div
-                    key={p.id}
-                    role="button"
-                    aria-pressed={on}
-                    onClick={() => toggle(p.id)}
-                    className={cn("cursor-pointer select-none", on && "bg-primary/5")}
-                  >
-                    <ListRow
-                      icon={<ListRowAvatar name={p.name} />}
-                      title={p.name}
-                      trailing={<ListRowCheckbox checked={on} />}
-                      className="w-full py-1.5"
-                    />
-                  </div>
-                );
-              })}
-            </ListCard>
-          )}
-        </div>
-
-        <div
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute inset-x-0 top-0 h-8 rounded-t-2xl bg-linear-to-b from-black/4 to-transparent transition-opacity",
-            listScroll.top ? "opacity-100" : "opacity-0",
-          )}
-        />
-        <div
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-2xl bg-linear-to-t from-black/4 to-transparent transition-opacity",
-            listScroll.bottom ? "opacity-100" : "opacity-0",
-          )}
-        />
-      </div>
+              );
+            })}
+          </ListCard>
+        )}
+      </ScrollShadowList>
 
       {error && (
         <p className="text-destructive text-sm shrink-0">{error}</p>
