@@ -1,84 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Trash2, TriangleAlert } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
-import { useBackDismiss } from "@/lib/use-back-dismiss";
-import type { Player } from "@/db/schema";
-import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { ListCard, ListRow, ListRowAvatar } from "@/components/list-card";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-
-type PlayerRow = Player & { owed: number; sessionCount: number };
-
-// One of 3 messages depending on what's attached to the player being deleted,
-// leading with the fact that matters most (safe / session count / amount owed).
-function DeleteMessage({ p }: { p: PlayerRow }) {
-  if (p.sessionCount === 0) {
-    return (
-      <>
-        <span className="block font-semibold text-foreground">Safe to delete.</span>
-        <span className="mt-1 block">Not connected to any session.</span>
-      </>
-    );
-  }
-  const sessions = `${p.sessionCount} ${p.sessionCount === 1 ? "session" : "sessions"}`;
-  if (p.owed > 0) {
-    return (
-      <>
-        <span className="block font-semibold text-foreground">
-          {formatCents(p.owed)} owed across {sessions}.
-        </span>
-        <span className="mt-1 block">
-          Deleting removes {p.name} completely. That balance and those sessions
-          will be removed from the totals.
-        </span>
-      </>
-    );
-  }
-  return (
-    <>
-      <span className="block font-semibold text-foreground">{sessions}, fully paid.</span>
-      <span className="mt-1 block">
-        Deleting removes {p.name} completely from those sessions and the totals.
-      </span>
-    </>
-  );
-}
+import { PlayerEditSheet, type PlayerRow } from "@/components/player-edit-sheet";
 
 // TEMPORARY: the roster still has inactive players left over from the old
 // deactivate feature. Show them here so they can be reviewed and hard
@@ -93,25 +26,7 @@ export default function PlayersPage() {
   const { data, isLoading } = useTrackedSWR<{ players: PlayerRow[] }>(key);
   const players = data?.players ?? [];
   const [newName, setNewName] = useState("");
-  // Player pending hard delete (confirmation dialog).
-  const [deleteTarget, setDeleteTarget] = useState<PlayerRow | null>(null);
-  useBackDismiss(deleteTarget !== null, () => setDeleteTarget(null));
-  // Keeps showing the same player's icon/message while the dialog animates
-  // closed, instead of falling through to the default case the instant
-  // deleteTarget is nulled out (which is still mounted mid-exit-animation).
-  const [deleteDisplay, setDeleteDisplay] = useState<PlayerRow | null>(null);
-  useEffect(() => {
-    if (deleteTarget) setDeleteDisplay(deleteTarget);
-  }, [deleteTarget]);
-
-  // Rename dialog state.
-  const [renameTarget, setRenameTarget] = useState<Player | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-
-  // Merge dialog state.
-  const [mergeSource, setMergeSource] = useState<Player | null>(null);
-  const [mergeTargetId, setMergeTargetId] = useState("");
-  const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerRow | null>(null);
 
   async function addPlayer(e: React.FormEvent) {
     e.preventDefault();
@@ -126,66 +41,36 @@ export default function PlayersPage() {
     mutate(key);
   }
 
-  function openRename(p: Player) {
-    setRenameTarget(p);
-    setRenameValue(p.name);
-  }
-
-  async function doRename() {
-    if (!renameTarget) return;
-    const name = renameValue.trim();
-    if (!name || name === renameTarget.name) {
-      setRenameTarget(null);
-      return;
-    }
-    await fetch(`/api/players/${renameTarget.id}`, {
+  async function renamePlayer(id: number, name: string) {
+    await fetch(`/api/players/${id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    setRenameTarget(null);
     // Broadcast: the name shows up anywhere else it's cached (e.g. an
     // open session's attendance list) without waiting for a navigation.
     mutate(() => true);
   }
 
-  async function doDelete() {
-    if (!deleteTarget) return;
-    const target = deleteTarget;
-    setDeleteTarget(null);
+  async function mergePlayers(sourceId: number, targetId: number) {
+    await fetch(`/api/players/${sourceId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mergeIntoId: targetId }),
+    });
+    mutate(key);
+  }
+
+  async function deletePlayer(target: PlayerRow) {
     await fetch(`/api/players/${target.id}`, { method: "DELETE" });
     mutate(key);
     mutate("/api/overview");
     toast.success(`${target.name} deleted`);
   }
 
-  const mergeTarget =
-    players.find((p) => String(p.id) === mergeTargetId) ?? null;
-  const mergeOthers = mergeSource
-    ? players.filter((p) => p.id !== mergeSource.id)
-    : [];
-
-  function openMerge(p: Player) {
-    setMergeSource(p);
-    setMergeTargetId("");
-  }
-
-  async function doMerge() {
-    if (!mergeSource || !mergeTarget) return;
-    await fetch(`/api/players/${mergeSource.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mergeIntoId: mergeTarget.id }),
-    });
-    setMergeConfirmOpen(false);
-    setMergeSource(null);
-    setMergeTargetId("");
-    mutate(key);
-  }
-
   return (
     <div className="space-y-4">
-      <PageHeader title="Players" />
+      <PageHeader title="Manage Players" />
 
       <form onSubmit={addPlayer} className="flex gap-2">
         <Input
@@ -212,200 +97,37 @@ export default function PlayersPage() {
       ) : (
         <ListCard>
           {players.map((p) => (
-            <ListRow
+            <div
               key={p.id}
-              icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
-              title={
-                <span
-                  className={p.active ? "" : "text-muted-foreground line-through"}
-                >
-                  {p.name}
-                </span>
-              }
-              trailing={
-                <ButtonGroup>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openRename(p)}
+              role="button"
+              onClick={() => setSelectedPlayer(p)}
+              className="cursor-pointer select-none"
+            >
+              <ListRow
+                icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
+                title={
+                  <span
+                    className={p.active ? "" : "text-muted-foreground line-through"}
                   >
-                    Rename
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground"
-                    onClick={() => openMerge(p)}
-                  >
-                    Merge
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => setDeleteTarget(p)}
-                  >
-                    Delete
-                  </Button>
-                </ButtonGroup>
-              }
-              className="w-full"
-            />
+                    {p.name}
+                  </span>
+                }
+                chevron
+                className="w-full"
+              />
+            </div>
           ))}
         </ListCard>
       )}
 
-      {/* Rename dialog */}
-      <Dialog
-        open={renameTarget !== null}
-        onOpenChange={(o) => !o && setRenameTarget(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename player</DialogTitle>
-            <DialogDescription>
-              Enter a new name for {renameTarget?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              doRename();
-            }}
-          >
-            <Input
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              autoFocus
-            />
-            <DialogFooter className="mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setRenameTarget(null)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!renameValue.trim()}>
-                Save
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Merge dialog */}
-      <Dialog
-        open={mergeSource !== null}
-        onOpenChange={(o) => {
-          if (!o) {
-            setMergeSource(null);
-            setMergeTargetId("");
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Merge {mergeSource?.name}</DialogTitle>
-            <DialogDescription>
-              Choose the player to merge into. All of {mergeSource?.name}&rsquo;s
-              sessions move to them, and {mergeSource?.name} is deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <Select value={mergeTargetId} onValueChange={setMergeTargetId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Choose a player…" />
-            </SelectTrigger>
-            <SelectContent>
-              {mergeOthers.map((o) => (
-                <SelectItem key={o.id} value={String(o.id)}>
-                  {o.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setMergeSource(null);
-                setMergeTargetId("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={!mergeTarget}
-              onClick={() => setMergeConfirmOpen(true)}
-            >
-              Merge…
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Merge confirmation */}
-      <AlertDialog open={mergeConfirmOpen} onOpenChange={setMergeConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Merge players?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Merge &ldquo;{mergeSource?.name}&rdquo; into &ldquo;
-              {mergeTarget?.name}&rdquo;? All of {mergeSource?.name}&rsquo;s
-              sessions move to {mergeTarget?.name}, and {mergeSource?.name} is
-              deleted. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doMerge}>Merge</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete confirmation */}
-      <Dialog
-        open={deleteTarget !== null}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-      >
-        <DialogContent className="max-w-xs rounded-2xl" showCloseButton={false}>
-          <DialogHeader className="items-center text-center">
-            <AlertDialogMedia
-              className={`size-20 ${
-                deleteDisplay?.sessionCount === 0
-                  ? "bg-transparent text-chart-4"
-                  : deleteDisplay && deleteDisplay.owed > 0
-                    ? "bg-transparent text-destructive"
-                    : "bg-transparent text-chart-5"
-              }`}
-            >
-              {deleteDisplay?.sessionCount === 0 ? (
-                <Trash2 className="size-14" />
-              ) : (
-                <TriangleAlert className="size-14" />
-              )}
-            </AlertDialogMedia>
-            <DialogTitle>Delete {deleteDisplay?.name}?</DialogTitle>
-            <DialogDescription>
-              {deleteDisplay && <DeleteMessage p={deleteDisplay} />}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="grid grid-cols-2 rounded-b-2xl">
-            <Button
-              variant="outline"
-              className="h-11"
-              onClick={() => setDeleteTarget(null)}
-            >
-              Cancel
-            </Button>
-            <Button className="h-11" onClick={doDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PlayerEditSheet
+        player={selectedPlayer}
+        players={players}
+        onOpenChange={(o) => !o && setSelectedPlayer(null)}
+        onRename={renamePlayer}
+        onMerge={mergePlayers}
+        onDelete={deletePlayer}
+      />
     </div>
   );
 }
