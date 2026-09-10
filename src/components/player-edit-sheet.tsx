@@ -155,9 +155,21 @@ export function PlayerEditSheet({
   const [displayPlayer, setDisplayPlayer] = useState<PlayerRow | null>(player);
   const [nav, setNav] = useState<Nav>({ mode: "menu", direction: 1 });
   const [height, setHeight] = useState<number>();
-  if (player && player !== displayPlayer) {
-    setDisplayPlayer(player);
-    setNav({ mode: "menu", direction: 1 });
+  // Tracks the prop's own open/closed transitions, not just which player —
+  // `displayPlayer` is intentionally left stale while the sheet is closing,
+  // so comparing against it alone would miss a reopen of the *same* player
+  // and leave `nav` stuck on whatever subview they'd navigated to before.
+  const [lastPlayer, setLastPlayer] = useState(player);
+  if (player !== lastPlayer) {
+    setLastPlayer(player);
+    if (player) {
+      setDisplayPlayer(player);
+      setNav({ mode: "menu", direction: 1 });
+      // Otherwise the sheet reopens still holding the previous session's
+      // measured height (e.g. the taller Merge view) and visibly animates
+      // down to the menu's height instead of just opening at it.
+      setHeight(undefined);
+    }
   }
   const mode = nav.mode;
 
