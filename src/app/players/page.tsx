@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
@@ -96,6 +96,13 @@ export default function PlayersPage() {
   // Player pending hard delete (confirmation dialog).
   const [deleteTarget, setDeleteTarget] = useState<PlayerRow | null>(null);
   useBackDismiss(deleteTarget !== null, () => setDeleteTarget(null));
+  // Keeps showing the same player's icon/message while the dialog animates
+  // closed, instead of falling through to the default case the instant
+  // deleteTarget is nulled out (which is still mounted mid-exit-animation).
+  const [deleteDisplay, setDeleteDisplay] = useState<PlayerRow | null>(null);
+  useEffect(() => {
+    if (deleteTarget) setDeleteDisplay(deleteTarget);
+  }, [deleteTarget]);
 
   // Rename dialog state.
   const [renameTarget, setRenameTarget] = useState<Player | null>(null);
@@ -367,22 +374,22 @@ export default function PlayersPage() {
           <DialogHeader className="items-center text-center">
             <AlertDialogMedia
               className={`size-20 ${
-                deleteTarget?.sessionCount === 0
+                deleteDisplay?.sessionCount === 0
                   ? "bg-transparent text-chart-4"
-                  : deleteTarget && deleteTarget.owed > 0
+                  : deleteDisplay && deleteDisplay.owed > 0
                     ? "bg-transparent text-destructive"
                     : "bg-transparent text-chart-5"
               }`}
             >
-              {deleteTarget?.sessionCount === 0 ? (
+              {deleteDisplay?.sessionCount === 0 ? (
                 <Trash2 className="size-14" />
               ) : (
                 <TriangleAlert className="size-14" />
               )}
             </AlertDialogMedia>
-            <DialogTitle>Delete {deleteTarget?.name}?</DialogTitle>
+            <DialogTitle>Delete {deleteDisplay?.name}?</DialogTitle>
             <DialogDescription>
-              {deleteTarget && <DeleteMessage p={deleteTarget} />}
+              {deleteDisplay && <DeleteMessage p={deleteDisplay} />}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="grid grid-cols-2 rounded-b-2xl">
