@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
 import { useScrollRestoration } from "@/lib/use-scroll-restoration";
+import { useBackDismiss } from "@/lib/use-back-dismiss";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
 import { PageHeader } from "@/components/page-header";
@@ -37,10 +39,46 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type PlayerRow = Player & { owed: number };
+type PlayerRow = Player & { owed: number; sessionCount: number };
+
+// One of 3 messages depending on what's attached to the player being deleted,
+// leading with the fact that matters most (safe / session count / amount owed).
+function DeleteMessage({ p }: { p: PlayerRow }) {
+  if (p.sessionCount === 0) {
+    return (
+      <>
+        <span className="block font-semibold text-foreground">Safe to delete.</span>
+        <span className="mt-1 block">Not connected to any session.</span>
+      </>
+    );
+  }
+  const sessions = `${p.sessionCount} ${p.sessionCount === 1 ? "session" : "sessions"}`;
+  if (p.owed > 0) {
+    return (
+      <>
+        <span className="block font-semibold text-foreground">
+          {formatCents(p.owed)} owed across {sessions}.
+        </span>
+        <span className="mt-1 block">
+          Deleting removes {p.name} completely. That balance and those sessions
+          will be removed from the totals.
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
+      <span className="block font-semibold text-foreground">{sessions}, fully paid.</span>
+      <span className="mt-1 block">
+        Deleting removes {p.name} completely from those sessions and the totals.
+      </span>
+    </>
+  );
+}
 
 // TEMPORARY: the roster still has inactive players left over from the old
 // deactivate feature. Show them here so they can be reviewed and hard
@@ -57,6 +95,7 @@ export default function PlayersPage() {
   const [newName, setNewName] = useState("");
   // Player pending hard delete (confirmation dialog).
   const [deleteTarget, setDeleteTarget] = useState<PlayerRow | null>(null);
+  useBackDismiss(deleteTarget !== null, () => setDeleteTarget(null));
 
   // Rename dialog state.
   const [renameTarget, setRenameTarget] = useState<Player | null>(null);
@@ -320,33 +359,46 @@ export default function PlayersPage() {
       </AlertDialog>
 
       {/* Delete confirmation */}
-      <AlertDialog
+      <Dialog
         open={deleteTarget !== null}
         onOpenChange={(o) => !o && setDeleteTarget(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleteTarget?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes {deleteTarget?.name} and all of their
-              session attendances
-              {deleteTarget && deleteTarget.owed > 0
-                ? `, including the ${formatCents(deleteTarget.owed)} they still owe`
-                : ""}
-              . This can&rsquo;t be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={doDelete}
-              className="bg-destructive text-white hover:bg-destructive/90"
+        <DialogContent className="max-w-xs rounded-2xl" showCloseButton={false}>
+          <DialogHeader className="items-center text-center">
+            <AlertDialogMedia
+              className={`size-20 ${
+                deleteTarget?.sessionCount === 0
+                  ? "bg-transparent text-chart-4"
+                  : deleteTarget && deleteTarget.owed > 0
+                    ? "bg-transparent text-destructive"
+                    : "bg-transparent text-chart-5"
+              }`}
             >
+              {deleteTarget?.sessionCount === 0 ? (
+                <Trash2 className="size-14" />
+              ) : (
+                <TriangleAlert className="size-14" />
+              )}
+            </AlertDialogMedia>
+            <DialogTitle>Delete {deleteTarget?.name}?</DialogTitle>
+            <DialogDescription>
+              {deleteTarget && <DeleteMessage p={deleteTarget} />}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="grid grid-cols-2 rounded-b-2xl">
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button className="h-11" onClick={doDelete}>
               Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

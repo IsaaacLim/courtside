@@ -32,9 +32,23 @@ export async function GET(req: Request) {
     owedRows.map((r) => [r.playerId, Number(r.owed) || 0]),
   );
 
+  // Total sessions attended (paid + unpaid), so the delete confirmation can
+  // warn about what's actually attached to a player before removing them.
+  const sessionCountRows = await db
+    .select({
+      playerId: attendances.playerId,
+      count: sql<number>`count(*)`,
+    })
+    .from(attendances)
+    .groupBy(attendances.playerId);
+  const sessionCountByPlayer = new Map(
+    sessionCountRows.map((r) => [r.playerId, Number(r.count) || 0]),
+  );
+
   const withOwed = rows.map((p) => ({
     ...p,
     owed: owedByPlayer.get(p.id) ?? 0,
+    sessionCount: sessionCountByPlayer.get(p.id) ?? 0,
   }));
 
   return NextResponse.json({ players: withOwed });
