@@ -14,7 +14,7 @@ export async function PATCH(
     return NextResponse.json({ error: "bad id" }, { status: 400 });
   }
 
-  let body: { name?: unknown; active?: unknown; mergeIntoId?: unknown };
+  let body: { name?: unknown; mergeIntoId?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -71,9 +71,6 @@ export async function PATCH(
   const updates: Partial<typeof players.$inferInsert> = {};
   if (typeof body.name === "string" && body.name.trim()) {
     updates.name = body.name.trim();
-  }
-  if (typeof body.active === "boolean") {
-    updates.active = body.active;
   }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "nothing to update" }, { status: 400 });
