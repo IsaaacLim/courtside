@@ -43,7 +43,7 @@ npm run dev                # http://localhost:3000
   rate), and a searchable player checklist with inline "add new player".
 - `/payments` — Search a player → tap **Paid** on unpaid sessions; multi-select for
   a lump-sum payment covering several weeks; **Undo** to reverse.
-- `/players` — Manage the roster: add, rename, deactivate, merge duplicates.
+- `/players` — Manage the roster: add, rename, delete, merge duplicates.
 
 ## Data model
 
@@ -88,18 +88,10 @@ todo
   - I need a page where I can find the players. (players who have all session paid for can't be found easily)
   - add new session. rate and player names should come out immediately all the time. After some time, the player list refetches (what triggers it?)
   - Add new session. How to handle players that are accidentally added?
-- Deactivate players
-  - How should I treat sessions with unpaid deactivated players? Currently they are still shown there with a button to pay and badge of inactive
-  - how should I treat sessions with only one player which is unpaid but get's deactivated. 
-- Permanently delete players
-  - Give option for inactive player to be permanently deleted
-  - Deleted players should be removed from all session histories, including paid and unpaid. (affecting the total)
-  - How should I treat empty sessions. Sessions with only the player that got deleted.
 - Optimise
   - Fetch the last-rate quicker
   - What causes certain pages to reload again upon revisit?
   - How to handle data fetching & rendering when we start having lots of data
-  - In player page, clicking "show inactive" causes the page to load (initial)... quite unecessary to refetch. just gotta do a quick filter. Also, it should it's own tab?
   - clean the tab component to remove unused styles
   - Fetch individual player and session data. opening each one takes sometime
 - Style
