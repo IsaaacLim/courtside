@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { db } from "@/db";
-import { attendances, players } from "@/db/schema";
+import { attendances, players, sessions } from "@/db/schema";
 import { bumpVersion } from "@/db/version";
 
 export async function PATCH(
@@ -98,9 +98,32 @@ export async function DELETE(
     return NextResponse.json({ error: "bad id" }, { status: 400 });
   }
 
+  // Sessions this player attended, so we can check afterward whether any of
+  // them are now empty.
+  const attended = await db
+    .select({ sessionId: attendances.sessionId })
+    .from(attendances)
+    .where(eq(attendances.playerId, id));
+  const sessionIds = [...new Set(attended.map((r) => r.sessionId))];
+
   // Foreign keys aren't enforced, so drop attendances explicitly rather than
   // relying on the schema's onDelete: "cascade" to do it.
   await db.delete(attendances).where(eq(attendances.playerId, id));
+
+  // A session with no attendees left is dead weight — drop it too, rather
+  // than leaving an orphaned row that's invisible everywhere in the app.
+  if (sessionIds.length) {
+    const remaining = await db
+      .select({ sessionId: attendances.sessionId })
+      .from(attendances)
+      .where(inArray(attendances.sessionId, sessionIds));
+    const stillAttended = new Set(remaining.map((r) => r.sessionId));
+    const emptySessionIds = sessionIds.filter((sid) => !stillAttended.has(sid));
+    if (emptySessionIds.length) {
+      await db.delete(sessions).where(inArray(sessions.id, emptySessionIds));
+    }
+  }
+
   const [row] = await db.delete(players).where(eq(players.id, id)).returning();
   if (!row) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
