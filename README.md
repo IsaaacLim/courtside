@@ -101,6 +101,15 @@ todo
   - Add an animated icon on the Home page to signify 'collect money now'
   - Restyle the "edit" dropdown menu for Players and Session
   - Make the Edit player buttons smaller, like FB or insta
+  - Do I want "edit session" modal to be the same like "new session" modal? Otherwise, the "new session" modal may be changed to "edit session" modal (?)
+  - Calendar should be displayed as a full modal
 - Bug
   - Mark a player with multipe sessions as all paid, then undo one of them. The background will be transparent until another session is "undo" (same with sessions)
   - The modal for merging players and edit session was messed up by mobile keyboard. It's better now but the height is still a bit jumpy
+
+### Nice to have
+- Quicker data edit. 
+  - Adding player is done optimistically. But the "add session" / "edit session" buttons will be disabled until the player is successfully added to the db.
+  - Adding player in done optimistically. But the "edit player" button will be disabled in the Manage Players page until the player is successfully added to the db.
+  - Delete and merge player is also optimistically executed.(Don't think there's any thing to work here though, just leaving a note)
+  - Make add new session quicker optimistic (not done yet). But the Overview and Sessions page will still have a lag on displaying the new info
