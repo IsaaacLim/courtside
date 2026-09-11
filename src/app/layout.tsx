@@ -24,6 +24,19 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover" as const,
+  // Without this, Android Chrome's default (`resizes-visual`) leaves the
+  // layout viewport's size unchanged when the on-screen keyboard opens —
+  // only `visualViewport` shrinks. `position: fixed` elements (like the
+  // player-edit sheet) are positioned relative to the *layout* viewport, so
+  // they never actually move or resize on their own; anything that looks
+  // keyboard-aware has to be faked with JS polling `visualViewport` resize
+  // events, which is inherently laggy/heuristic and is what was producing
+  // the sheet's inconsistent grow/shrink-past-the-viewport behavior.
+  // `resizes-content` makes the browser itself shrink the layout viewport
+  // (and hence the fixed-position containing block) to match the visible
+  // area above the keyboard, so a `bottom-0` fixed element is correctly
+  // repositioned by the browser with no JS involved.
+  interactiveWidget: "resizes-content" as const,
 };
 
 export default function RootLayout({

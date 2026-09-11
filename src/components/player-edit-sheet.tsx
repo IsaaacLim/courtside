@@ -95,22 +95,14 @@ const slideVariants = {
 // doesn't tear down and resubscribe every render.
 function noop() {}
 
-// Fixed pixel heights instead of a fraction of `window.innerHeight`/`vh` —
-// on Android that value reflects the *current* (possibly keyboard-resized)
-// layout viewport rather than a stable screen height, and re-deriving a
-// height from it was still producing an inconsistent post-keyboard-close
-// size even when only read once, at sheet-open. Plain constants sidestep
-// needing any viewport read at all.
+// Plain pixel constants, not a fraction of `window.innerHeight`/`vh` — no
+// functional need for either now that the root layout's
+// `interactiveWidget: "resizes-content"` (see app/layout.tsx) keeps
+// `window.innerHeight`/`vh` correctly in sync with the keyboard-adjusted
+// viewport, but a fixed frame is still the simplest way to express "a
+// generous, mostly-constant amount of space" for these two subviews.
 const SHEET_HEIGHT_MID = 520; // Merge's fixed frame before its search input is focused.
-// Merge's and Rename's keyboard-open height, kept identical on purpose: vaul
-// caches the drawer's outer height once, the first time any input inside it
-// is ever focused (see the `repositionInputs` comment on `<Drawer>` below),
-// and reuses that single cached value to restore the drawer whenever the
-// keyboard closes afterward — regardless of which subview is open at the
-// time. If Rename and Merge targeted different heights, whichever one
-// happened to focus first would "win" that cache for both, and the other
-// would get silently reset to the wrong size on keyboard-close.
-const SHEET_HEIGHT_TALL = 760;
+const SHEET_HEIGHT_TALL = 760; // Merge's/Rename's frame once an input is focused.
 
 // Reports its rendered height to the parent so the sheet can animate a real
 // `height` change (a reflow) instead of Motion's transform-based `layout`
@@ -281,19 +273,20 @@ export function PlayerEditSheet({
       <Drawer
         open={player !== null}
         onOpenChange={(o) => !o && onOpenChange(false)}
-        // Leave `repositionInputs` at vaul's default (true). Merge and
-        // (once expanded) Rename already grow `height` themselves — see
-        // `mergeExpanded`/`renameExpanded` above — so vaul's own viewport-
-        // driven resize of the drawer is mostly redundant for us. But
-        // `repositionInputs={false}` turns out to also disable vaul's
-        // `usePreventScroll` mobile scroll-lock (its `isDisabled` check
-        // ORs in `!repositionInputs` — there's no way to opt out of one
-        // without the other). Without that lock, focusing an input lets
-        // the browser's native "scroll the focused input into view"
-        // behavior run unguarded, which — per vaul's own source comments —
-        // can drag a `position: fixed` element like this sheet off-screen.
-        // That's what was actually causing the sheet to grow/scroll out of
-        // view on keyboard close, not our own height logic.
+        // The root layout's `interactiveWidget: "resizes-content"` viewport
+        // setting (see app/layout.tsx) makes the browser itself shrink the
+        // layout viewport to match the visible area above the on-screen
+        // keyboard, so this `position: fixed` sheet is correctly
+        // repositioned by the browser with no JS involved. vaul's own
+        // `repositionInputs` mechanism is a same-frame heuristic
+        // (`visualViewport` resize polling + a caches-once-forever
+        // "initial height" it restores on keyboard close) that exists to
+        // fake this same behavior on pages that don't opt into that
+        // viewport setting — with it in place, that heuristic is not just
+        // redundant but actively harmful: it still runs and still mutates
+        // this drawer's inline height/bottom, fighting the browser's own
+        // (now correct) sizing. Disabling it removes that fight entirely.
+        repositionInputs={false}
       >
         <DrawerContent className="bg-background data-[vaul-drawer-direction=bottom]:mt-2 data-[vaul-drawer-direction=bottom]:max-h-[900px]">
           {/*
