@@ -201,8 +201,8 @@ export function PlayerEditSheet({
   players: PlayerRow[];
   onOpenChange: (open: boolean) => void;
   onRename: (id: number, name: string) => Promise<void>;
-  onMerge: (sourceId: number, targetId: number) => Promise<void>;
-  onDelete: (target: PlayerRow) => Promise<void>;
+  onMerge: (sourceId: number, targetId: number) => void;
+  onDelete: (target: PlayerRow) => void;
 }) {
   useBackDismiss(player !== null, () => onOpenChange(false));
 
@@ -299,16 +299,16 @@ export function PlayerEditSheet({
   );
   const mergeTarget = mergeOthers.find((p) => p.id === mergeTargetId) ?? null;
 
-  async function confirmMerge() {
+  function confirmMerge() {
     if (!displayPlayer || !mergeTarget) return;
-    await onMerge(displayPlayer.id, mergeTarget.id);
+    onMerge(displayPlayer.id, mergeTarget.id);
     setMergeConfirmOpen(false);
     onOpenChange(false);
   }
 
-  async function confirmDelete() {
+  function confirmDelete() {
     if (!displayPlayer) return;
-    await onDelete(displayPlayer);
+    onDelete(displayPlayer);
     setDeleteConfirmOpen(false);
     onOpenChange(false);
   }

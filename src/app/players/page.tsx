@@ -45,20 +45,62 @@ export default function PlayersPage() {
     mutate(() => true);
   }
 
+  // Optimistic: remove the row from the cache immediately so the sheet/list
+  // reflects it with no wait, then fire the request in the background. Any
+  // failure re-inserts the row and shows an error, instead of the previous
+  // code's unconditional success (it never checked res.ok at all).
+  function removePlayerFromCache(id: number) {
+    mutate(
+      key,
+      (curr: { players: PlayerRow[] } | undefined) => ({
+        players: (curr?.players ?? []).filter((p) => p.id !== id),
+      }),
+      { revalidate: false },
+    );
+  }
+
+  function restorePlayerInCache(target: PlayerRow) {
+    mutate(
+      key,
+      (curr: { players: PlayerRow[] } | undefined) => ({
+        players: [...(curr?.players ?? []), target].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        ),
+      }),
+      { revalidate: false },
+    );
+  }
+
   async function mergePlayers(sourceId: number, targetId: number) {
-    await fetch(`/api/players/${sourceId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mergeIntoId: targetId }),
-    });
-    mutate(key);
+    const source = players.find((p) => p.id === sourceId);
+    removePlayerFromCache(sourceId);
+
+    try {
+      const res = await fetch(`/api/players/${sourceId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mergeIntoId: targetId }),
+      });
+      if (!res.ok) throw new Error();
+      mutate("/api/overview");
+    } catch {
+      if (source) restorePlayerInCache(source);
+      toast.error(`Could not merge ${source?.name ?? "player"}. Please try again.`);
+    }
   }
 
   async function deletePlayer(target: PlayerRow) {
-    await fetch(`/api/players/${target.id}`, { method: "DELETE" });
-    mutate(key);
-    mutate("/api/overview");
-    toast.success(`${target.name} deleted`);
+    removePlayerFromCache(target.id);
+
+    try {
+      const res = await fetch(`/api/players/${target.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      mutate("/api/overview");
+      toast.success(`${target.name} deleted`);
+    } catch {
+      restorePlayerInCache(target);
+      toast.error(`Could not delete ${target.name}. Please try again.`);
+    }
   }
 
   return (
