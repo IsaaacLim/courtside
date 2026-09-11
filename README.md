@@ -88,6 +88,7 @@ todo
   - I need a page where I can find the players. (players who have all session paid for can't be found easily)
   - add new session. rate and player names should come out immediately all the time. After some time, the player list refetches (what triggers it?)
   - Add new session. How to handle players that are accidentally added?
+  - Have db backups
 - Optimise
   - Fetch the last-rate quicker
   - What causes certain pages to reload again upon revisit?
@@ -98,5 +99,8 @@ todo
   - The Player / Session secondary modal need a clear UI to indicate that this is just information, and cannot be selected.
   - Persist scroll position. It works on dev but not on staging and prod
   - Add an animated icon on the Home page to signify 'collect money now'
+  - Restyle the "edit" dropdown menu for Players and Session
+  - Make the Edit player buttons smaller, like FB or insta
 - Bug
   - Mark a player with multipe sessions as all paid, then undo one of them. The background will be transparent until another session is "undo" (same with sessions)
+  - The modal for merging players and edit session was messed up by mobile keyboard. It's better now but the height is still a bit jumpy
