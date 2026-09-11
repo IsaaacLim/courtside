@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
 import {
   ListCard,
   ListRow,
@@ -81,6 +82,7 @@ export function NewSessionForm({
   const [rateInvalid, setRateInvalid] = useState(false);
   const rateInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
+  const [addingPlayer, setAddingPlayer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -117,25 +119,30 @@ export function NewSessionForm({
 
   async function addAndSelect() {
     const name = search.trim();
-    if (!name) return;
-    const res = await fetch("/api/players", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    const data = await res.json();
-    if (data.player) {
-      mutate(
-        PLAYERS_KEY,
-        (curr: { players: Player[] } | undefined) => ({
-          players: [...(curr?.players ?? []), data.player].sort((a, b) =>
-            a.name.localeCompare(b.name),
-          ),
-        }),
-        { revalidate: false },
-      );
-      setSelected((prev) => new Set(prev).add(data.player.id));
-      setSearch("");
+    if (!name || addingPlayer) return;
+    setAddingPlayer(true);
+    try {
+      const res = await fetch("/api/players", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (data.player) {
+        mutate(
+          PLAYERS_KEY,
+          (curr: { players: Player[] } | undefined) => ({
+            players: [...(curr?.players ?? []), data.player].sort((a, b) =>
+              a.name.localeCompare(b.name),
+            ),
+          }),
+          { revalidate: false },
+        );
+        setSelected((prev) => new Set(prev).add(data.player.id));
+        setSearch("");
+      }
+    } finally {
+      setAddingPlayer(false);
     }
   }
 
@@ -267,19 +274,29 @@ export function NewSessionForm({
             {canAddNew && (
               <div
                 role="button"
-                onClick={addAndSelect}
-                className="cursor-pointer select-none"
+                aria-disabled={addingPlayer}
+                onClick={addingPlayer ? undefined : addAndSelect}
+                className={cn(
+                  "cursor-pointer select-none",
+                  addingPlayer && "pointer-events-none opacity-60",
+                )}
               >
                 <ListRow
                   icon={
                     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Plus className="size-4" />
+                      {addingPlayer ? (
+                        <Spinner className="size-4" />
+                      ) : (
+                        <Plus className="size-4" />
+                      )}
                     </span>
                   }
                   title={
-                    <>
-                      Add &ldquo;{search.trim()}&rdquo; as a new player
-                    </>
+                    addingPlayer ? (
+                      <>Adding &ldquo;{search.trim()}&rdquo;&hellip;</>
+                    ) : (
+                      <>Add &ldquo;{search.trim()}&rdquo; as a new player</>
+                    )
                   }
                   className="w-full py-1.5"
                 />
