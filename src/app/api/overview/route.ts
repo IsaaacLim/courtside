@@ -10,7 +10,6 @@ export async function GET() {
       attId: attendances.id,
       playerId: attendances.playerId,
       playerName: players.name,
-      playerActive: players.active,
       sessionId: attendances.sessionId,
       date: sessions.date,
       rate: sessions.rate,
@@ -34,29 +33,25 @@ export async function GET() {
   >();
 
   for (const r of rows) {
-    // Collected counts everyone (money actually received, incl. inactive
-    // players). Outstanding / who-owes only count active players.
     if (r.paid) {
       totalCollected += r.amountDue;
-    } else if (r.playerActive) {
+    } else {
       totalOutstanding += r.amountDue;
     }
 
-    if (r.playerActive) {
-      const p = byPlayer.get(r.playerId) ?? {
-        playerId: r.playerId,
-        name: r.playerName,
-        owed: 0,
-        unpaid: 0,
-        sessions: 0,
-      };
-      p.sessions += 1;
-      if (!r.paid) {
-        p.owed += r.amountDue;
-        p.unpaid += 1;
-      }
-      byPlayer.set(r.playerId, p);
+    const p = byPlayer.get(r.playerId) ?? {
+      playerId: r.playerId,
+      name: r.playerName,
+      owed: 0,
+      unpaid: 0,
+      sessions: 0,
+    };
+    p.sessions += 1;
+    if (!r.paid) {
+      p.owed += r.amountDue;
+      p.unpaid += 1;
     }
+    byPlayer.set(r.playerId, p);
 
     const s = bySession.get(r.sessionId) ?? {
       sessionId: r.sessionId,

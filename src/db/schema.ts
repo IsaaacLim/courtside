@@ -19,7 +19,6 @@ export const players = sqliteTable("players", {
     .$type<string[]>()
     .notNull()
     .default(sql`'[]'`),
-  active: integer("active", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

@@ -7,10 +7,8 @@ import { bumpVersion } from "@/db/version";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim() ?? "";
-  const includeInactive = url.searchParams.get("includeInactive") === "1";
 
   const conditions = [];
-  if (!includeInactive) conditions.push(eq(players.active, true));
   if (q) conditions.push(like(players.name, `%${q}%`));
 
   const rows = await db

@@ -22,7 +22,6 @@ type SessionAttendance = {
   id: number;
   playerId: number;
   playerName: string;
-  playerActive: boolean;
   amountDue: number;
   paid: boolean;
   paidAt: string | null;
@@ -53,16 +52,7 @@ export function SessionPreview({
   const outstanding = unpaid.reduce((sum, r) => sum + r.amountDue, 0);
 
   function renderTitle(r: SessionAttendance) {
-    return r.playerActive ? (
-      r.playerName
-    ) : (
-      <span className="inline-flex items-center gap-1.5">
-        {r.playerName}
-        <Badge variant="secondary" className="text-[10px]">
-          Inactive
-        </Badge>
-      </span>
-    );
+    return r.playerName;
   }
 
   return (

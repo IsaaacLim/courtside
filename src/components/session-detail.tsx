@@ -56,7 +56,6 @@ type SessionAttendance = {
   id: number;
   playerId: number;
   playerName: string;
-  playerActive: boolean;
   amountDue: number;
   paid: boolean;
   paidAt: string | null;
@@ -203,31 +202,22 @@ export function SessionDetail({
                 checked={checked}
                 onToggle={toggleCheck}
                 onMarkPaid={(id) => setPaid([id], true)}
-                renderTitle={(r) =>
-                  r.playerActive ? (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewPlayer({ id: r.playerId, name: r.playerName });
-                      }}
-                      className="inline-flex items-center gap-1"
-                    >
-                      {r.playerName}
-                      <ArrowUpRight
-                        className="size-3.5 text-muted-foreground/50"
-                        aria-hidden
-                      />
-                    </button>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5">
-                      {r.playerName}
-                      <Badge variant="secondary" className="text-[10px]">
-                        Inactive
-                      </Badge>
-                    </span>
-                  )
-                }
+                renderTitle={(r) => (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewPlayer({ id: r.playerId, name: r.playerName });
+                    }}
+                    className="inline-flex items-center gap-1"
+                  >
+                    {r.playerName}
+                    <ArrowUpRight
+                      className="size-3.5 text-muted-foreground/50"
+                      aria-hidden
+                    />
+                  </button>
+                )}
               />
             )}
           </section>
@@ -238,30 +228,21 @@ export function SessionDetail({
               <PaidAttendanceList
                 rows={paid}
                 onUndo={(id) => setPaid([id], false)}
-                renderTitle={(r) =>
-                  r.playerActive ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPreviewPlayer({ id: r.playerId, name: r.playerName })
-                      }
-                      className="inline-flex items-center gap-1"
-                    >
-                      {r.playerName}
-                      <ArrowUpRight
-                        className="size-3.5 text-muted-foreground/50"
-                        aria-hidden
-                      />
-                    </button>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5">
-                      {r.playerName}
-                      <Badge variant="secondary" className="text-[10px]">
-                        Inactive
-                      </Badge>
-                    </span>
-                  )
-                }
+                renderTitle={(r) => (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewPlayer({ id: r.playerId, name: r.playerName })
+                    }
+                    className="inline-flex items-center gap-1"
+                  >
+                    {r.playerName}
+                    <ArrowUpRight
+                      className="size-3.5 text-muted-foreground/50"
+                      aria-hidden
+                    />
+                  </button>
+                )}
               />
             </section>
           )}

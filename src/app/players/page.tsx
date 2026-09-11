@@ -13,16 +13,9 @@ import { ListCard, ListRow, ListRowAvatar } from "@/components/list-card";
 import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { PlayerEditSheet, type PlayerRow } from "@/components/player-edit-sheet";
 
-// TEMPORARY: the roster still has inactive players left over from the old
-// deactivate feature. Show them here so they can be reviewed and hard
-// deleted. Once the roster is clean, delete this constant and the
-// `includeInactive` query param (in both this file and the API route) —
-// there's no more "inactive" state to show once deactivate is gone for good.
-const SHOW_INACTIVE_PLAYERS = true;
-
 export default function PlayersPage() {
   useScrollRestoration();
-  const key = `/api/players?includeInactive=${SHOW_INACTIVE_PLAYERS ? "1" : "0"}`;
+  const key = "/api/players";
   const { data, isLoading } = useTrackedSWR<{ players: PlayerRow[] }>(key);
   const players = data?.players ?? [];
   const [newName, setNewName] = useState("");
@@ -105,13 +98,7 @@ export default function PlayersPage() {
             >
               <ListRow
                 icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
-                title={
-                  <span
-                    className={p.active ? "" : "text-muted-foreground line-through"}
-                  >
-                    {p.name}
-                  </span>
-                }
+                title={p.name}
                 chevron
                 className="w-full"
               />
