@@ -272,8 +272,28 @@ export function SessionDetail({
       )}
 
       {/* Edit drawer + delete dialog. */}
-      <Drawer open={editOpen} onOpenChange={setEditOpen}>
-        <DrawerContent className="h-[85vh]">
+      <Drawer
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        // See the matching Drawer prop in player-edit-sheet.tsx: the root
+        // layout's `interactiveWidget: "resizes-content"` already makes the
+        // browser itself shrink this fixed-position sheet to fit above the
+        // on-screen keyboard, so vaul's own `repositionInputs` heuristic
+        // (built for pages without that viewport setting) is redundant here
+        // and was fighting the browser's correct sizing with its own
+        // stale-cached height/bottom mutations.
+        repositionInputs={false}
+      >
+        <DrawerContent
+          // `dvh`, not `vh`: `vh` is pinned to the initial viewport and
+          // doesn't shrink when the keyboard opens, so a plain `85vh` sheet
+          // (plus the base max-h-[80vh] it was fighting) stayed full-height
+          // and got covered/clipped by the keyboard instead of shrinking to
+          // fit above it. Both the height and its max-height cap need to be
+          // dvh — capping with a stale `vh` value would silently override a
+          // correctly-shrinking `dvh` height right back to the bug.
+          className="h-[85dvh] data-[vaul-drawer-direction=bottom]:max-h-[85dvh]"
+        >
           <DrawerHeader className="text-left shrink-0">
             <DrawerTitle>Edit session</DrawerTitle>
           </DrawerHeader>
