@@ -95,12 +95,20 @@ const slideVariants = {
 // doesn't tear down and resubscribe every render.
 function noop() {}
 
-// Plain pixel constants, not a fraction of `window.innerHeight`/`vh` — no
-// functional need for either now that the root layout's
-// `interactiveWidget: "resizes-content"` (see app/layout.tsx) keeps
-// `window.innerHeight`/`vh` correctly in sync with the keyboard-adjusted
-// viewport, but a fixed frame is still the simplest way to express "a
-// generous, mostly-constant amount of space" for these two subviews.
+// Target frames for Merge/Rename, expressed as a CSS `min()` of a flat px
+// number and a `dvh` percentage — not a plain px number. The root layout's
+// `interactiveWidget: "resizes-content"` (see app/layout.tsx) makes the
+// browser genuinely shrink the viewport to the visible area above the
+// on-screen keyboard, which is what correctly repositions this
+// `position: fixed` sheet — but it also means a *plain* fixed px height (no
+// dvh/vh at all) can now be taller than that shrunk viewport and overflow
+// past the sheet's own edges (DrawerContent has no `overflow-hidden`, so
+// that overflow bleeds off-screen rather than clipping). The px number is
+// still the *target* on a normal, keyboard-closed viewport; the `dvh` term
+// only kicks in as a ceiling once the keyboard eats enough space to matter.
+function sheetHeight(px: number): string {
+  return `min(${px}px, 78dvh)`;
+}
 const SHEET_HEIGHT_MID = 520; // Merge's fixed frame before its search input is focused.
 const SHEET_HEIGHT_TALL = 760; // Merge's/Rename's frame once an input is focused.
 
@@ -177,7 +185,7 @@ export function PlayerEditSheet({
   // render instead of one tick later.
   const [displayPlayer, setDisplayPlayer] = useState<PlayerRow | null>(player);
   const [nav, setNav] = useState<Nav>({ mode: "menu", direction: 1 });
-  const [height, setHeight] = useState<number>();
+  const [height, setHeight] = useState<number | string>();
   // Tracks the prop's own open/closed transitions, not just which player —
   // `displayPlayer` is intentionally left stale while the sheet is closing,
   // so comparing against it alone would miss a reopen of the *same* player
@@ -242,7 +250,7 @@ export function PlayerEditSheet({
     setMergeSearch("");
     setMergeTargetId(null);
     setMergeExpanded(false);
-    setHeight(SHEET_HEIGHT_MID);
+    setHeight(sheetHeight(SHEET_HEIGHT_MID));
     go("merge", 1);
   }
 
@@ -288,15 +296,17 @@ export function PlayerEditSheet({
         // (now correct) sizing. Disabling it removes that fight entirely.
         repositionInputs={false}
       >
-        <DrawerContent className="bg-background data-[vaul-drawer-direction=bottom]:mt-2 data-[vaul-drawer-direction=bottom]:max-h-[900px]">
+        <DrawerContent className="bg-background data-[vaul-drawer-direction=bottom]:mt-2 data-[vaul-drawer-direction=bottom]:max-h-[min(92dvh,900px)]">
           {/*
-            Merge/Rename's fixed SHEET_HEIGHT_MID/TALL frames are otherwise
-            silently capped by the default max-h-[80vh] — the menu never
-            got tall enough to notice. A fixed px cap here (not `vh`, same
-            reasoning as SHEET_HEIGHT_MID/TALL above) is comfortably above
-            SHEET_HEIGHT_TALL plus the header, so it only ever kicks in as a
-            safety ceiling on very short screens — flexbox shrinks the
-            inner content to fit instead of overflowing.
+            Merge/Rename's fixed frames are otherwise silently capped by the
+            default max-h-[80vh] — the menu never got tall enough to notice.
+            `min(92dvh, 900px)` mirrors `sheetHeight()` above: a `dvh`
+            ceiling so this outer box shrinks along with the (now correctly
+            resizing, see `interactiveWidget` in app/layout.tsx)
+            keyboard-adjusted viewport, `min`-ed with a flat px ceiling as a
+            sanity cap on large/desktop viewports where 92dvh alone would be
+            excessive. Kept a few dvh points above `sheetHeight()`'s own 78dvh
+            so this box has room for the header on top of the inner content.
           */}
           <DrawerHeader className="shrink-0">
             <DrawerTitle className="text-base">
@@ -342,7 +352,7 @@ export function PlayerEditSheet({
                     // before the keyboard starts opening.
                     if (!renameExpanded) {
                       setRenameExpanded(true);
-                      setHeight(SHEET_HEIGHT_TALL);
+                      setHeight(sheetHeight(SHEET_HEIGHT_TALL));
                     }
                     subviewInputRef.current?.focus();
                   }
@@ -446,7 +456,7 @@ export function PlayerEditSheet({
                         onFocus={() => {
                           if (!mergeExpanded) {
                             setMergeExpanded(true);
-                            setHeight(SHEET_HEIGHT_TALL);
+                            setHeight(sheetHeight(SHEET_HEIGHT_TALL));
                           }
                         }}
                         placeholder="Search players"
