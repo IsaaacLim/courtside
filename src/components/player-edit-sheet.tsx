@@ -582,7 +582,7 @@ export function PlayerEditSheet({
       {/* Merge confirmation */}
       <Dialog open={mergeConfirmOpen} onOpenChange={setMergeConfirmOpen}>
         <DialogContent
-          className="max-w-xs rounded-2xl"
+          className="max-w-[min(20rem,calc(100%-2rem))] rounded-2xl"
           showCloseButton={false}
           onPointerDown={(e) => {
             // This dialog is portalled outside the Drawer's DOM, so a press
@@ -633,7 +633,7 @@ export function PlayerEditSheet({
       {/* Delete confirmation */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent
-          className="max-w-xs rounded-2xl"
+          className="max-w-[min(20rem,calc(100%-2rem))] rounded-2xl"
           showCloseButton={false}
           onPointerDown={(e) => {
             // See the matching comment on the merge confirm dialog above:
