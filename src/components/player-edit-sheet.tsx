@@ -88,6 +88,16 @@ const slideVariants = {
   exit: (direction: 1 | -1) => ({ x: direction > 0 ? -24 : 24, opacity: 0 }),
 };
 
+// Merge drives its own fixed height (see `mergeExpanded` below) instead of
+// MeasuredPanel's content measurement, so its `onHeight` is a no-op —
+// stable across renders so MeasuredPanel's ResizeObserver effect doesn't
+// tear down and resubscribe every render.
+function noop() {}
+
+function vh(fraction: number): number {
+  return window.innerHeight * fraction;
+}
+
 // Reports its rendered height to the parent so the sheet can animate a real
 // `height` change (a reflow) instead of Motion's transform-based `layout`
 // resize, which scales the whole subtree and visibly stretches/squishes
@@ -214,6 +224,10 @@ export function PlayerEditSheet({
   const [renameValue, setRenameValue] = useState("");
   const [mergeSearch, setMergeSearch] = useState("");
   const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
+  // One-way ratchet: focusing the search input grows the sheet to 95vh and
+  // it stays there (even once the keyboard closes) until Merge is
+  // re-entered, matching Instagram/Messenger's fixed-frame keyboard UX.
+  const [mergeExpanded, setMergeExpanded] = useState(false);
   const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -242,6 +256,8 @@ export function PlayerEditSheet({
   function openMerge() {
     setMergeSearch("");
     setMergeTargetId(null);
+    setMergeExpanded(false);
+    setHeight(vh(0.65));
     go("merge", 1);
   }
 
@@ -273,7 +289,16 @@ export function PlayerEditSheet({
         open={player !== null}
         onOpenChange={(o) => !o && onOpenChange(false)}
       >
-        <DrawerContent ref={drawerContentRef} className="bg-background">
+        <DrawerContent
+          ref={drawerContentRef}
+          className="bg-background data-[vaul-drawer-direction=bottom]:mt-8 data-[vaul-drawer-direction=bottom]:max-h-[97vh]"
+        >
+          {/*
+            Merge's 65vh/95vh targets are otherwise silently capped by the
+            default max-h-[80vh] (and pushed further off-screen by the
+            default mt-24) — menu/rename never got tall enough to notice.
+            Exact numbers may need a tweak once seen on a real phone.
+          */}
           <DrawerHeader className="shrink-0">
             <DrawerTitle className="text-base">
               {displayPlayer?.name ?? ""}
@@ -295,6 +320,7 @@ export function PlayerEditSheet({
             <AnimatePresence initial={false} custom={nav.direction} mode="popLayout">
               <motion.div
                 key={mode}
+                className="h-full"
                 custom={nav.direction}
                 variants={slideVariants}
                 initial="enter"
@@ -302,14 +328,30 @@ export function PlayerEditSheet({
                 exit="exit"
                 transition={SLIDE_TRANSITION}
                 onAnimationComplete={(definition) => {
-                  if (definition === "center" && mode !== "menu") {
+                  // Merge's search input deliberately doesn't auto-focus at
+                  // all (only Rename does) — the keyboard should only open
+                  // once the user taps it themselves, so the sheet can open
+                  // at a calm fixed 65vh instead of immediately fighting the
+                  // keyboard for space.
+                  if (definition === "center" && mode === "rename") {
                     subviewInputRef.current?.focus();
                   }
                 }}
               >
                 <MeasuredPanel
-                  onHeight={setHeight}
-                  className="px-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+                  onHeight={mode === "merge" ? noop : setHeight}
+                  className={cn(
+                    "px-4 pt-2",
+                    // Merge is given its own fixed height (h-full, filling
+                    // the wrapper's 65vh/95vh) instead of being measured, so
+                    // its player list can flex to fill the space below the
+                    // search bar. Its Back/Merge buttons float over the
+                    // content as a fixed footer (see below) instead of
+                    // sitting in flow, hence the extra bottom clearance.
+                    mode === "merge"
+                      ? "h-full pb-24"
+                      : "pb-[calc(1rem+env(safe-area-inset-bottom))]",
+                  )}
                 >
                 {mode === "menu" && (
                   <ListCard>
@@ -384,13 +426,19 @@ export function PlayerEditSheet({
                 )}
 
                 {mode === "merge" && (
-                  <div className="space-y-3">
-                    <div className="relative">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="relative shrink-0">
                       <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         ref={subviewInputRef}
                         value={mergeSearch}
                         onChange={(e) => setMergeSearch(e.target.value)}
+                        onFocus={() => {
+                          if (!mergeExpanded) {
+                            setMergeExpanded(true);
+                            setHeight(vh(0.95));
+                          }
+                        }}
                         placeholder="Search players"
                         className="h-8 rounded-full border pl-10 text-base"
                       />
@@ -407,7 +455,8 @@ export function PlayerEditSheet({
                       </Empty>
                     ) : (
                       <ScrollShadowList
-                        scrollClassName="max-h-[45vh]"
+                        containerClassName="flex-1 min-h-0"
+                        scrollClassName="h-full"
                         scrollDeps={[filteredOthers.length]}
                       >
                         <ListCard className="shadow-none">
@@ -435,30 +484,38 @@ export function PlayerEditSheet({
                         </ListCard>
                       </ScrollShadowList>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-11"
-                        onClick={() => go("menu", -1)}
-                      >
-                        Back
-                      </Button>
-                      <Button
-                        type="button"
-                        className="h-11"
-                        disabled={!mergeTarget}
-                        onClick={() => setMergeConfirmOpen(true)}
-                      >
-                        Merge
-                      </Button>
-                    </div>
                   </div>
                 )}
               </MeasuredPanel>
               </motion.div>
             </AnimatePresence>
           </div>
+
+          {mode === "merge" && (
+            // Floats over the content instead of sitting in flow, so it's
+            // never pushed off-screen by a long list — and since it's
+            // positioned within DrawerContent's own box (which vaul itself
+            // shifts up via `style.bottom` while the keyboard is open), it
+            // stays above the keyboard for free.
+            <div className="absolute inset-x-0 bottom-0 grid grid-cols-2 gap-2 border-t border-list-divider bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11"
+                onClick={() => go("menu", -1)}
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                className="h-11"
+                disabled={!mergeTarget}
+                onClick={() => setMergeConfirmOpen(true)}
+              >
+                Merge
+              </Button>
+            </div>
+          )}
         </DrawerContent>
       </Drawer>
 
