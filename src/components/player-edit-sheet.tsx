@@ -156,32 +156,7 @@ export function PlayerEditSheet({
 }) {
   useBackDismiss(player !== null, () => onOpenChange(false));
 
-  // vaul's `repositionInputs` shrinks the drawer's DOM node directly
-  // (bypassing our own `height` state below) while a text input is
-  // focused, then on keyboard-close snaps it back to a height it cached
-  // the *first* time this ever fired for this mounted Drawer.Root — and
-  // never re-caches, for the component's lifetime. That's fine the first
-  // time, but wrong for every subview navigated to afterwards. There's no
-  // public API to invalidate that cache, so on every keyboard-close we
-  // clear vaul's inline styles ourselves and let the still-correct
-  // `height` state (and the drawer's own layout classes) take back over.
   const drawerContentRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!player) return;
-    function onViewportResize() {
-      const vv = window.visualViewport;
-      const el = drawerContentRef.current;
-      if (!vv || !el) return;
-      const keyboardClosed = window.innerHeight - vv.height < 60;
-      if (keyboardClosed) {
-        el.style.height = "";
-        el.style.bottom = "";
-      }
-    }
-    window.visualViewport?.addEventListener("resize", onViewportResize);
-    return () =>
-      window.visualViewport?.removeEventListener("resize", onViewportResize);
-  }, [player]);
 
   // Rename/merge-search inputs focus themselves manually (see
   // onAnimationComplete below) instead of via `autoFocus`, so the keyboard
@@ -216,6 +191,42 @@ export function PlayerEditSheet({
     }
   }
   const mode = nav.mode;
+
+  // vaul's `repositionInputs` shrinks the drawer's DOM node directly
+  // (bypassing our own `height` state below) while a text input is
+  // focused, then on keyboard-close snaps it back to a height it cached
+  // the *first* time this ever fired for this mounted Drawer.Root — and
+  // never re-caches, for the component's lifetime. That's fine the first
+  // time, but wrong for every subview navigated to afterwards. There's no
+  // public API to invalidate that cache (and vaul's own listener effect
+  // never re-runs after mount, so passing a per-mode `repositionInputs`
+  // prop doesn't work either), so we clear vaul's inline styles ourselves.
+  // For merge specifically, which manages its own fixed 65vh/95vh height,
+  // we clear on *every* viewport event (not just keyboard-close) — that
+  // height ratchet already gives the keyboard room, so vaul's live
+  // shrink/shift is pure noise here and otherwise visibly jumps the whole
+  // sheet around as the keyboard opens and closes.
+  useEffect(() => {
+    if (!player) return;
+    function onViewportResize() {
+      const vv = window.visualViewport;
+      const el = drawerContentRef.current;
+      if (!vv || !el) return;
+      if (mode === "merge") {
+        el.style.height = "";
+        el.style.bottom = "";
+        return;
+      }
+      const keyboardClosed = window.innerHeight - vv.height < 60;
+      if (keyboardClosed) {
+        el.style.height = "";
+        el.style.bottom = "";
+      }
+    }
+    window.visualViewport?.addEventListener("resize", onViewportResize);
+    return () =>
+      window.visualViewport?.removeEventListener("resize", onViewportResize);
+  }, [player, mode]);
 
   function go(mode: Mode, direction: 1 | -1) {
     setNav({ mode, direction });
@@ -291,13 +302,17 @@ export function PlayerEditSheet({
       >
         <DrawerContent
           ref={drawerContentRef}
-          className="bg-background data-[vaul-drawer-direction=bottom]:mt-8 data-[vaul-drawer-direction=bottom]:max-h-[97vh]"
+          className="bg-background data-[vaul-drawer-direction=bottom]:mt-2 data-[vaul-drawer-direction=bottom]:max-h-[97vh]"
         >
           {/*
             Merge's 65vh/95vh targets are otherwise silently capped by the
-            default max-h-[80vh] (and pushed further off-screen by the
-            default mt-24) — menu/rename never got tall enough to notice.
-            Exact numbers may need a tweak once seen on a real phone.
+            default max-h-[80vh] — menu/rename never got tall enough to
+            notice. mt + max-h are kept small enough that they can never add
+            up to more than the viewport height, so the sheet can't get
+            pushed off-screen at the top no matter how tall its content
+            asks to be — flexbox just shrinks the inner content to fit
+            instead (imperceptible: merge's content is already ~90%+ of the
+            screen at that point).
           */}
           <DrawerHeader className="shrink-0">
             <DrawerTitle className="text-base">
@@ -341,16 +356,12 @@ export function PlayerEditSheet({
                 <MeasuredPanel
                   onHeight={mode === "merge" ? noop : setHeight}
                   className={cn(
-                    "px-4 pt-2",
+                    "px-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]",
                     // Merge is given its own fixed height (h-full, filling
                     // the wrapper's 65vh/95vh) instead of being measured, so
                     // its player list can flex to fill the space below the
-                    // search bar. Its Back/Merge buttons float over the
-                    // content as a fixed footer (see below) instead of
-                    // sitting in flow, hence the extra bottom clearance.
-                    mode === "merge"
-                      ? "h-full pb-24"
-                      : "pb-[calc(1rem+env(safe-area-inset-bottom))]",
+                    // search bar.
+                    mode === "merge" && "h-full",
                   )}
                 >
                 {mode === "menu" && (
@@ -484,38 +495,30 @@ export function PlayerEditSheet({
                         </ListCard>
                       </ScrollShadowList>
                     )}
+                    <div className="grid shrink-0 grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        onClick={() => go("menu", -1)}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        className="h-11"
+                        disabled={!mergeTarget}
+                        onClick={() => setMergeConfirmOpen(true)}
+                      >
+                        Merge
+                      </Button>
+                    </div>
                   </div>
                 )}
               </MeasuredPanel>
               </motion.div>
             </AnimatePresence>
           </div>
-
-          {mode === "merge" && (
-            // Floats over the content instead of sitting in flow, so it's
-            // never pushed off-screen by a long list — and since it's
-            // positioned within DrawerContent's own box (which vaul itself
-            // shifts up via `style.bottom` while the keyboard is open), it
-            // stays above the keyboard for free.
-            <div className="absolute inset-x-0 bottom-0 grid grid-cols-2 gap-2 border-t border-list-divider bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11"
-                onClick={() => go("menu", -1)}
-              >
-                Back
-              </Button>
-              <Button
-                type="button"
-                className="h-11"
-                disabled={!mergeTarget}
-                onClick={() => setMergeConfirmOpen(true)}
-              >
-                Merge
-              </Button>
-            </div>
-          )}
         </DrawerContent>
       </Drawer>
 
