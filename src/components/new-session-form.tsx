@@ -86,6 +86,11 @@ export function NewSessionForm({
   // Decrementing counter for optimistic new-player rows: guaranteed unique
   // and never collides with real (positive, autoincrement) player ids.
   const tempIdRef = useRef(0);
+  // Count of in-flight addAndSelect() calls. While > 0, `selected` may
+  // contain a placeholder (negative) id — block submit so it can never reach
+  // /api/sessions, which would fail the attendances insert on a foreign-key
+  // violation after the session row was already created.
+  const [pendingAdds, setPendingAdds] = useState(0);
 
   useEffect(() => {
     // Prefill the rate and date only when creating a new session — this runs
@@ -147,6 +152,7 @@ export function NewSessionForm({
       { revalidate: false },
     );
     setSelected((prev) => new Set(prev).add(tempId));
+    setPendingAdds((n) => n + 1);
 
     try {
       const res = await fetch("/api/players", {
@@ -189,6 +195,8 @@ export function NewSessionForm({
       });
       setSearch(name);
       setError(`Could not add "${name}". Please try again.`);
+    } finally {
+      setPendingAdds((n) => n - 1);
     }
   }
 
@@ -374,11 +382,13 @@ export function NewSessionForm({
 
       <Button
         onClick={submit}
-        disabled={submitting || selected.size === 0}
+        disabled={submitting || selected.size === 0 || pendingAdds > 0}
         className="w-full h-11 rounded-full text-base shadow-lg shrink-0"
       >
         {selected.size === 0 ? (
           "Select players"
+        ) : pendingAdds > 0 ? (
+          "Adding player…"
         ) : submitting ? (
           editing ? "Saving…" : "Creating…"
         ) : (
