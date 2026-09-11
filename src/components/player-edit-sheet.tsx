@@ -2,7 +2,15 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Merge, Pencil, Search, Trash2, TriangleAlert } from "lucide-react";
+import {
+  Check,
+  CircleHelp,
+  Merge,
+  Pencil,
+  Search,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { useBackDismiss } from "@/lib/use-back-dismiss";
 import type { Player } from "@/db/schema";
 import { formatCents } from "@/lib/money";
@@ -26,17 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialogMedia } from "@/components/ui/alert-dialog";
 
 export type PlayerRow = Player & { owed: number; sessionCount: number };
 
@@ -47,7 +45,9 @@ export function DeleteMessage({ p }: { p: PlayerRow }) {
     return (
       <>
         <span className="block font-semibold text-foreground">Safe to delete.</span>
-        <span className="mt-1 block">Not connected to any session.</span>
+        <span className="mt-1 block">
+          {p.name} hasn&rsquo;t played any sessions yet. This player will be removed.
+        </span>
       </>
     );
   }
@@ -70,6 +70,40 @@ export function DeleteMessage({ p }: { p: PlayerRow }) {
       <span className="block font-semibold text-foreground">{sessions}, fully paid.</span>
       <span className="mt-1 block">
         Deleting removes {p.name} completely from those sessions and the totals.
+      </span>
+    </>
+  );
+}
+
+// Same 3-message shape as DeleteMessage above, but for merging: leads with
+// the same facts (safe / session count / amount owed), and the detail line
+// says where that session/balance data ends up instead of that it's gone.
+// Unlike Delete, the ≥1-session detail line doesn't vary by owed status —
+// only the headline does.
+export function MergeMessage({ p, target }: { p: PlayerRow; target: PlayerRow | null }) {
+  const name = target?.name ?? "";
+  if (p.sessionCount === 0) {
+    return (
+      <>
+        <span className="block font-semibold text-foreground">Safe to merge.</span>
+        <span className="mt-1 block">
+          {p.name}{' '}hasn&rsquo;t played any sessions yet. This player will be
+          removed and merged into {name}.
+        </span>
+      </>
+    );
+  }
+  const sessions = `${p.sessionCount} ${p.sessionCount === 1 ? "session" : "sessions"}`;
+  return (
+    <>
+      <span className="block font-semibold text-foreground">
+        {p.owed > 0
+          ? `${formatCents(p.owed)} owed across ${sessions}.`
+          : `${sessions}, fully paid.`}
+      </span>
+      <span className="mt-1 block">
+        All session history will be moved under {name}. {p.name} will then be
+        deleted.
       </span>
     </>
   );
@@ -546,8 +580,10 @@ export function PlayerEditSheet({
       </Drawer>
 
       {/* Merge confirmation */}
-      <AlertDialog open={mergeConfirmOpen} onOpenChange={setMergeConfirmOpen}>
-        <AlertDialogContent
+      <Dialog open={mergeConfirmOpen} onOpenChange={setMergeConfirmOpen}>
+        <DialogContent
+          className="max-w-xs rounded-2xl"
+          showCloseButton={false}
           onPointerDown={(e) => {
             // This dialog is portalled outside the Drawer's DOM, so a press
             // in here (eg. Cancel) still bubbles up to the document listener
@@ -560,21 +596,39 @@ export function PlayerEditSheet({
             e.stopPropagation();
           }}
         >
-          <AlertDialogHeader>
-            <AlertDialogTitle>Merge players?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Merge &ldquo;{displayPlayer?.name}&rdquo; into &ldquo;
-              {mergeTarget?.name}&rdquo;? All of {displayPlayer?.name}&rsquo;s
-              sessions move to {mergeTarget?.name}, and {displayPlayer?.name} is
-              deleted. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmMerge}>Merge</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <DialogHeader className="items-center text-center">
+            <AlertDialogMedia
+              className={`size-20 bg-transparent ${
+                displayPlayer?.sessionCount === 0 ? "text-chart-4" : "text-chart-5"
+              }`}
+            >
+              {displayPlayer?.sessionCount === 0 ? (
+                <CircleHelp className="size-14" />
+              ) : (
+                <TriangleAlert className="size-14" />
+              )}
+            </AlertDialogMedia>
+            <DialogTitle>Merge {displayPlayer?.name}?</DialogTitle>
+            <DialogDescription>
+              {displayPlayer && (
+                <MergeMessage p={displayPlayer} target={mergeTarget} />
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="grid grid-cols-2 rounded-b-2xl">
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => setMergeConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button className="h-11" onClick={confirmMerge}>
+              Merge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -602,7 +656,7 @@ export function PlayerEditSheet({
               }`}
             >
               {displayPlayer?.sessionCount === 0 ? (
-                <Trash2 className="size-14" />
+                <CircleHelp className="size-14" />
               ) : (
                 <TriangleAlert className="size-14" />
               )}
