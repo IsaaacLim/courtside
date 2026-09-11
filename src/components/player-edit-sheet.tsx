@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, Merge, Pencil, Search, Trash2, TriangleAlert } from "lucide-react";
 import { useBackDismiss } from "@/lib/use-back-dismiss";
@@ -146,6 +146,40 @@ export function PlayerEditSheet({
 }) {
   useBackDismiss(player !== null, () => onOpenChange(false));
 
+  // vaul's `repositionInputs` shrinks the drawer's DOM node directly
+  // (bypassing our own `height` state below) while a text input is
+  // focused, then on keyboard-close snaps it back to a height it cached
+  // the *first* time this ever fired for this mounted Drawer.Root — and
+  // never re-caches, for the component's lifetime. That's fine the first
+  // time, but wrong for every subview navigated to afterwards. There's no
+  // public API to invalidate that cache, so on every keyboard-close we
+  // clear vaul's inline styles ourselves and let the still-correct
+  // `height` state (and the drawer's own layout classes) take back over.
+  const drawerContentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!player) return;
+    function onViewportResize() {
+      const vv = window.visualViewport;
+      const el = drawerContentRef.current;
+      if (!vv || !el) return;
+      const keyboardClosed = window.innerHeight - vv.height < 60;
+      if (keyboardClosed) {
+        el.style.height = "";
+        el.style.bottom = "";
+      }
+    }
+    window.visualViewport?.addEventListener("resize", onViewportResize);
+    return () =>
+      window.visualViewport?.removeEventListener("resize", onViewportResize);
+  }, [player]);
+
+  // Rename/merge-search inputs focus themselves manually (see
+  // onAnimationComplete below) instead of via `autoFocus`, so the keyboard
+  // only opens once the slide/height transition has fully settled — vaul's
+  // keyboard-open height computation reads the drawer's live height, so it
+  // needs to run against the final size, not a mid-transition one.
+  const subviewInputRef = useRef<HTMLInputElement>(null);
+
   // Keeps rendering the same player's content while the sheet animates
   // closed, instead of falling through to the empty case the instant
   // `player` is nulled out (still mounted mid-exit-animation). Adjusted
@@ -239,7 +273,7 @@ export function PlayerEditSheet({
         open={player !== null}
         onOpenChange={(o) => !o && onOpenChange(false)}
       >
-        <DrawerContent className="bg-background">
+        <DrawerContent ref={drawerContentRef} className="bg-background">
           <DrawerHeader className="shrink-0">
             <DrawerTitle className="text-base">
               {displayPlayer?.name ?? ""}
@@ -256,7 +290,7 @@ export function PlayerEditSheet({
               height,
               transition: `height ${SLIDE_TRANSITION.duration}s ease-in-out`,
             }}
-            className="relative overflow-hidden"
+            className="relative overflow-y-auto overflow-x-hidden"
           >
             <AnimatePresence initial={false} custom={nav.direction} mode="popLayout">
               <motion.div
@@ -267,6 +301,11 @@ export function PlayerEditSheet({
                 animate="center"
                 exit="exit"
                 transition={SLIDE_TRANSITION}
+                onAnimationComplete={(definition) => {
+                  if (definition === "center" && mode !== "menu") {
+                    subviewInputRef.current?.focus();
+                  }
+                }}
               >
                 <MeasuredPanel
                   onHeight={setHeight}
@@ -319,9 +358,9 @@ export function PlayerEditSheet({
                 {mode === "rename" && (
                   <div className="space-y-4">
                     <Input
+                      ref={subviewInputRef}
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
-                      autoFocus
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <Button
@@ -349,11 +388,11 @@ export function PlayerEditSheet({
                     <div className="relative">
                       <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
+                        ref={subviewInputRef}
                         value={mergeSearch}
                         onChange={(e) => setMergeSearch(e.target.value)}
                         placeholder="Search players"
                         className="h-8 rounded-full border pl-10 text-base"
-                        autoFocus
                       />
                     </div>
                     {filteredOthers.length === 0 ? (
