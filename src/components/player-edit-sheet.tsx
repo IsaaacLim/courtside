@@ -95,8 +95,8 @@ const slideVariants = {
 // doesn't tear down and resubscribe every render.
 function noop() {}
 
-function vh(fraction: number): number {
-  return window.innerHeight * fraction;
+function vh(viewportHeight: number, fraction: number): number {
+  return viewportHeight * fraction;
 }
 
 // Reports its rendered height to the parent so the sheet can animate a real
@@ -164,6 +164,15 @@ export function PlayerEditSheet({
   // needs to run against the final size, not a mid-transition one.
   const subviewInputRef = useRef<HTMLInputElement>(null);
 
+  // `vh()` fractions are computed against this, not a fresh
+  // `window.innerHeight` read, because on Android that value is the
+  // *current* (possibly keyboard-resized) layout viewport, not a stable
+  // screen height — reading it near a focus event risks capturing a
+  // moment already skewed by the keyboard opening. Captured once below,
+  // when the sheet opens at the menu (definitely keyboard-closed), and
+  // reused for every ratchet for the rest of this open/close cycle.
+  const [viewportHeight, setViewportHeight] = useState(0);
+
   // Keeps rendering the same player's content while the sheet animates
   // closed, instead of falling through to the empty case the instant
   // `player` is nulled out (still mounted mid-exit-animation). Adjusted
@@ -187,6 +196,7 @@ export function PlayerEditSheet({
       // measured height (e.g. the taller Merge view) and visibly animates
       // down to the menu's height instead of just opening at it.
       setHeight(undefined);
+      setViewportHeight(window.innerHeight);
     }
   }
   const mode = nav.mode;
@@ -241,7 +251,7 @@ export function PlayerEditSheet({
     setMergeSearch("");
     setMergeTargetId(null);
     setMergeExpanded(false);
-    setHeight(vh(0.65));
+    setHeight(vh(viewportHeight, 0.65));
     go("merge", 1);
   }
 
@@ -329,17 +339,18 @@ export function PlayerEditSheet({
                   // at a calm fixed 65vh instead of immediately fighting the
                   // keyboard for space.
                   if (definition === "center" && mode === "rename") {
-                    subviewInputRef.current?.focus();
                     // Ratchet Rename to the same fixed height Merge opens
                     // at, once — gives the keyboard room without vaul's
                     // help (see the `<Drawer repositionInputs={false}>`
                     // comment above). The input+buttons sit near the top of
                     // that space, so the extra height just appears as blank
-                    // space below them.
+                    // space below them. Set before focusing so the height
+                    // is already settled before the keyboard starts opening.
                     if (!renameExpanded) {
                       setRenameExpanded(true);
-                      setHeight(vh(0.65));
+                      setHeight(vh(viewportHeight, 0.65));
                     }
+                    subviewInputRef.current?.focus();
                   }
                 }}
               >
@@ -441,7 +452,7 @@ export function PlayerEditSheet({
                         onFocus={() => {
                           if (!mergeExpanded) {
                             setMergeExpanded(true);
-                            setHeight(vh(0.95));
+                            setHeight(vh(viewportHeight, 0.95));
                           }
                         }}
                         placeholder="Search players"
