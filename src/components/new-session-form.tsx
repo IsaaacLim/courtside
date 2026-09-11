@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Spinner } from "@/components/ui/spinner";
 import {
   ListCard,
   ListRow,
@@ -82,9 +81,11 @@ export function NewSessionForm({
   const [rateInvalid, setRateInvalid] = useState(false);
   const rateInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
-  const [addingPlayer, setAddingPlayer] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Decrementing counter for optimistic new-player rows: guaranteed unique
+  // and never collides with real (positive, autoincrement) player ids.
+  const tempIdRef = useRef(0);
 
   useEffect(() => {
     // Prefill the rate and date only when creating a new session — this runs
@@ -119,8 +120,34 @@ export function NewSessionForm({
 
   async function addAndSelect() {
     const name = search.trim();
-    if (!name || addingPlayer) return;
-    setAddingPlayer(true);
+    if (!name) return;
+    setError("");
+
+    // Optimistic insert: add a placeholder player (negative id) to the SWR
+    // cache and select it immediately, so the row appears with no perceived
+    // delay. Clearing `search` right away also hides the "Add as new
+    // player" row on this same tick, which is what actually prevents a
+    // double-click from firing a second POST — not a loading/disabled state.
+    tempIdRef.current -= 1;
+    const tempId = tempIdRef.current;
+    const optimisticPlayer: Player = {
+      id: tempId,
+      name,
+      aliases: [],
+      createdAt: new Date(),
+    };
+    setSearch("");
+    mutate(
+      PLAYERS_KEY,
+      (curr: { players: Player[] } | undefined) => ({
+        players: [...(curr?.players ?? []), optimisticPlayer].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        ),
+      }),
+      { revalidate: false },
+    );
+    setSelected((prev) => new Set(prev).add(tempId));
+
     try {
       const res = await fetch("/api/players", {
         method: "POST",
@@ -128,21 +155,40 @@ export function NewSessionForm({
         body: JSON.stringify({ name }),
       });
       const data = await res.json();
-      if (data.player) {
-        mutate(
-          PLAYERS_KEY,
-          (curr: { players: Player[] } | undefined) => ({
-            players: [...(curr?.players ?? []), data.player].sort((a, b) =>
-              a.name.localeCompare(b.name),
-            ),
-          }),
-          { revalidate: false },
-        );
-        setSelected((prev) => new Set(prev).add(data.player.id));
-        setSearch("");
-      }
-    } finally {
-      setAddingPlayer(false);
+      if (!res.ok || !data.player) throw new Error();
+
+      // Swap the placeholder for the real player once it's created.
+      mutate(
+        PLAYERS_KEY,
+        (curr: { players: Player[] } | undefined) => ({
+          players: (curr?.players ?? [])
+            .map((p) => (p.id === tempId ? data.player : p))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        }),
+        { revalidate: false },
+      );
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(tempId);
+        next.add(data.player.id);
+        return next;
+      });
+    } catch {
+      // Roll back the placeholder and let the user retry.
+      mutate(
+        PLAYERS_KEY,
+        (curr: { players: Player[] } | undefined) => ({
+          players: (curr?.players ?? []).filter((p) => p.id !== tempId),
+        }),
+        { revalidate: false },
+      );
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(tempId);
+        return next;
+      });
+      setSearch(name);
+      setError(`Could not add "${name}". Please try again.`);
     }
   }
 
@@ -183,7 +229,7 @@ export function NewSessionForm({
     } else {
       const d = await res.json().catch(() => ({}));
       setError(
-        d.error ?? `Could not ${editing ? "update" : "create"} session.`,
+        d.error ?? `Could not ${editing ? "update" : "create"} session. Please try again.`,
       );
     }
   }
@@ -274,29 +320,19 @@ export function NewSessionForm({
             {canAddNew && (
               <div
                 role="button"
-                aria-disabled={addingPlayer}
-                onClick={addingPlayer ? undefined : addAndSelect}
-                className={cn(
-                  "cursor-pointer select-none",
-                  addingPlayer && "pointer-events-none opacity-60",
-                )}
+                onClick={addAndSelect}
+                className="cursor-pointer select-none"
               >
                 <ListRow
                   icon={
                     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      {addingPlayer ? (
-                        <Spinner className="size-4" />
-                      ) : (
-                        <Plus className="size-4" />
-                      )}
+                      <Plus className="size-4" />
                     </span>
                   }
                   title={
-                    addingPlayer ? (
-                      <>Adding &ldquo;{search.trim()}&rdquo;&hellip;</>
-                    ) : (
-                      <>Add &ldquo;{search.trim()}&rdquo; as a new player</>
-                    )
+                    <>
+                      Add &ldquo;{search.trim()}&rdquo; as a new player
+                    </>
                   }
                   className="w-full py-1.5"
                 />
