@@ -292,7 +292,9 @@ export function PlayerEditSheet({
   }
 
   const mergeOthers = displayPlayer
-    ? players.filter((p) => p.id !== displayPlayer.id)
+    // Excludes any still-pending optimistic add (negative id, not a real
+    // player server-side yet) from being picked as a merge target.
+    ? players.filter((p) => p.id !== displayPlayer.id && p.id > 0)
     : [];
   const filteredOthers = mergeOthers.filter((p) =>
     p.name.toLowerCase().includes(mergeSearch.trim().toLowerCase()),

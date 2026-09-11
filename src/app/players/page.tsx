@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
 import { useTrackedSWR } from "@/lib/use-tracked-swr";
@@ -20,18 +20,72 @@ export default function PlayersPage() {
   const players = data?.players ?? [];
   const [newName, setNewName] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerRow | null>(null);
+  // Decrementing counter for optimistic new-player rows: guaranteed unique,
+  // never collides with real (positive, autoincrement) player ids.
+  const tempIdRef = useRef(0);
 
   async function addPlayer(e: React.FormEvent) {
     e.preventDefault();
     const name = newName.trim();
     if (!name) return;
     setNewName("");
-    await fetch("/api/players", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    mutate(key);
+
+    // Optimistic insert: add a placeholder (negative id) immediately, then
+    // swap it for the real player on success or roll it back on failure.
+    // While pending, the row is excluded from being tapped into the edit
+    // sheet and from the merge-target list (see the `id > 0` guards below) —
+    // acting on a placeholder id before it resolves can leave the real
+    // created player invisible until a refresh, or worse for merge.
+    tempIdRef.current -= 1;
+    const tempId = tempIdRef.current;
+    const optimisticPlayer: PlayerRow = {
+      id: tempId,
+      name,
+      aliases: [],
+      createdAt: new Date(),
+      owed: 0,
+      sessionCount: 0,
+    };
+    mutate(
+      key,
+      (curr: { players: PlayerRow[] } | undefined) => ({
+        players: [...(curr?.players ?? []), optimisticPlayer].sort((a, b) =>
+          a.name.localeCompare(b.name),
+        ),
+      }),
+      { revalidate: false },
+    );
+
+    try {
+      const res = await fetch("/api/players", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.player) throw new Error();
+      mutate(
+        key,
+        (curr: { players: PlayerRow[] } | undefined) => ({
+          players: (curr?.players ?? [])
+            .map((p) =>
+              p.id === tempId ? { ...data.player, owed: 0, sessionCount: 0 } : p,
+            )
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        }),
+        { revalidate: false },
+      );
+    } catch {
+      mutate(
+        key,
+        (curr: { players: PlayerRow[] } | undefined) => ({
+          players: (curr?.players ?? []).filter((p) => p.id !== tempId),
+        }),
+        { revalidate: false },
+      );
+      setNewName(name);
+      toast.error(`Could not add "${name}". Please try again.`);
+    }
   }
 
   async function renamePlayer(id: number, name: string) {
@@ -131,21 +185,28 @@ export default function PlayersPage() {
         </Empty>
       ) : (
         <ListCard>
-          {players.map((p) => (
-            <div
-              key={p.id}
-              role="button"
-              onClick={() => setSelectedPlayer(p)}
-              className="cursor-pointer select-none"
-            >
-              <ListRow
-                icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
-                title={p.name}
-                chevron
-                className="w-full"
-              />
-            </div>
-          ))}
+          {players.map((p) => {
+            // Still-pending optimistic add (negative id) — not yet a real
+            // player server-side, so it can't be tapped into rename/merge/
+            // delete until it resolves.
+            const pending = p.id < 0;
+            return (
+              <div
+                key={p.id}
+                role="button"
+                aria-disabled={pending}
+                onClick={() => !pending && setSelectedPlayer(p)}
+                className={pending ? "select-none opacity-60" : "cursor-pointer select-none"}
+              >
+                <ListRow
+                  icon={<ListRowAvatar name={p.name} colorKey={String(p.id)} />}
+                  title={p.name}
+                  chevron={!pending}
+                  className="w-full"
+                />
+              </div>
+            );
+          })}
         </ListCard>
       )}
 
