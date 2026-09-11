@@ -101,8 +101,16 @@ function noop() {}
 // height from it was still producing an inconsistent post-keyboard-close
 // size even when only read once, at sheet-open. Plain constants sidestep
 // needing any viewport read at all.
-const SHEET_HEIGHT_MID = 520; // Merge/Rename's fixed frame before the keyboard opens.
-const SHEET_HEIGHT_TALL = 760; // Merge's frame once its search input is focused.
+const SHEET_HEIGHT_MID = 520; // Merge's fixed frame before its search input is focused.
+// Merge's and Rename's keyboard-open height, kept identical on purpose: vaul
+// caches the drawer's outer height once, the first time any input inside it
+// is ever focused (see the `repositionInputs` comment on `<Drawer>` below),
+// and reuses that single cached value to restore the drawer whenever the
+// keyboard closes afterward — regardless of which subview is open at the
+// time. If Rename and Merge targeted different heights, whichever one
+// happened to focus first would "win" that cache for both, and the other
+// would get silently reset to the wrong size on keyboard-close.
+const SHEET_HEIGHT_TALL = 760;
 
 // Reports its rendered height to the parent so the sheet can animate a real
 // `height` change (a reflow) instead of Motion's transform-based `layout`
@@ -203,18 +211,14 @@ export function PlayerEditSheet({
   const [renameValue, setRenameValue] = useState("");
   const [mergeSearch, setMergeSearch] = useState("");
   const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
-  // One-way ratchet: focusing the search input grows the sheet to 95vh and
-  // it stays there (even once the keyboard closes) until Merge is
-  // re-entered, matching Instagram/Messenger's fixed-frame keyboard UX.
+  // One-way ratchet: focusing the search input grows the sheet to a fixed
+  // height and it stays there (even once the keyboard closes) until Merge
+  // is re-entered, matching Instagram/Messenger's fixed-frame keyboard UX.
   const [mergeExpanded, setMergeExpanded] = useState(false);
   // Same ratchet for Rename: its own content is short, so without this the
-  // keyboard would cover the input/buttons on open. We deliberately don't
-  // rely on vaul's `repositionInputs` for this (see the `<Drawer>` prop
-  // below) — its viewport listener is wired up once at mount with no way
-  // to react to per-mode changes, and racing its writes to the drawer's
-  // inline height/bottom style proved unreliable on real devices. Growing
-  // to a fixed height ourselves, same as Merge, sidesteps needing it at
-  // all: the extra room just shows as blank space below the buttons.
+  // keyboard would cover the input/buttons on open. Growing to a fixed
+  // height ourselves (same target as Merge's — see SHEET_HEIGHT_TALL above)
+  // means the extra room just shows as blank space below the buttons.
   const [renameExpanded, setRenameExpanded] = useState(false);
   const [mergeConfirmOpen, setMergeConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -277,17 +281,19 @@ export function PlayerEditSheet({
       <Drawer
         open={player !== null}
         onOpenChange={(o) => !o && onOpenChange(false)}
-        // Merge and (once expanded) Rename manage their own keyboard
-        // clearance by growing `height` themselves — see `mergeExpanded`/
-        // `renameExpanded` above — so vaul never needs to reach in and
-        // resize the drawer itself. Its `repositionInputs` viewport
-        // listener can't be toggled per-mode anyway (wired up once at
-        // mount, with no way to react to later prop changes), and racing
-        // its writes to the drawer's inline height/bottom style proved
-        // unreliable on real devices — sometimes winning, sometimes not,
-        // and sometimes leaving the sheet taller than the viewport after
-        // the keyboard closed. Disabling it entirely removes that race.
-        repositionInputs={false}
+        // Leave `repositionInputs` at vaul's default (true). Merge and
+        // (once expanded) Rename already grow `height` themselves — see
+        // `mergeExpanded`/`renameExpanded` above — so vaul's own viewport-
+        // driven resize of the drawer is mostly redundant for us. But
+        // `repositionInputs={false}` turns out to also disable vaul's
+        // `usePreventScroll` mobile scroll-lock (its `isDisabled` check
+        // ORs in `!repositionInputs` — there's no way to opt out of one
+        // without the other). Without that lock, focusing an input lets
+        // the browser's native "scroll the focused input into view"
+        // behavior run unguarded, which — per vaul's own source comments —
+        // can drag a `position: fixed` element like this sheet off-screen.
+        // That's what was actually causing the sheet to grow/scroll out of
+        // view on keyboard close, not our own height logic.
       >
         <DrawerContent className="bg-background data-[vaul-drawer-direction=bottom]:mt-2 data-[vaul-drawer-direction=bottom]:max-h-[900px]">
           {/*
@@ -331,19 +337,19 @@ export function PlayerEditSheet({
                   // Merge's search input deliberately doesn't auto-focus at
                   // all (only Rename does) — the keyboard should only open
                   // once the user taps it themselves, so the sheet can open
-                  // at a calm fixed 65vh instead of immediately fighting the
-                  // keyboard for space.
+                  // at a calm SHEET_HEIGHT_MID instead of immediately
+                  // fighting the keyboard for space.
                   if (definition === "center" && mode === "rename") {
-                    // Ratchet Rename to the same fixed height Merge opens
-                    // at, once — gives the keyboard room without vaul's
-                    // help (see the `<Drawer repositionInputs={false}>`
-                    // comment above). The input+buttons sit near the top of
-                    // that space, so the extra height just appears as blank
-                    // space below them. Set before focusing so the height
-                    // is already settled before the keyboard starts opening.
+                    // Ratchet Rename to the same fixed height as Merge's
+                    // expanded state (SHEET_HEIGHT_TALL, not _MID — see its
+                    // comment above for why these must match). The
+                    // input+buttons sit near the top of that space, so the
+                    // extra height just appears as blank space below them.
+                    // Set before focusing so the height is already settled
+                    // before the keyboard starts opening.
                     if (!renameExpanded) {
                       setRenameExpanded(true);
-                      setHeight(SHEET_HEIGHT_MID);
+                      setHeight(SHEET_HEIGHT_TALL);
                     }
                     subviewInputRef.current?.focus();
                   }
@@ -358,9 +364,9 @@ export function PlayerEditSheet({
                   className={cn(
                     "px-4 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]",
                     // Merge is given its own fixed height (h-full, filling
-                    // the wrapper's 65vh/95vh) instead of being measured, so
-                    // its player list can flex to fill the space below the
-                    // search bar.
+                    // the wrapper's fixed SHEET_HEIGHT_MID/_TALL) instead of
+                    // being measured, so its player list can flex to fill
+                    // the space below the search bar.
                     mode === "merge" && "h-full",
                   )}
                 >
