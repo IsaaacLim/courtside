@@ -95,9 +95,14 @@ const slideVariants = {
 // doesn't tear down and resubscribe every render.
 function noop() {}
 
-function vh(viewportHeight: number, fraction: number): number {
-  return viewportHeight * fraction;
-}
+// Fixed pixel heights instead of a fraction of `window.innerHeight`/`vh` —
+// on Android that value reflects the *current* (possibly keyboard-resized)
+// layout viewport rather than a stable screen height, and re-deriving a
+// height from it was still producing an inconsistent post-keyboard-close
+// size even when only read once, at sheet-open. Plain constants sidestep
+// needing any viewport read at all.
+const SHEET_HEIGHT_MID = 520; // Merge/Rename's fixed frame before the keyboard opens.
+const SHEET_HEIGHT_TALL = 760; // Merge's frame once its search input is focused.
 
 // Reports its rendered height to the parent so the sheet can animate a real
 // `height` change (a reflow) instead of Motion's transform-based `layout`
@@ -164,15 +169,6 @@ export function PlayerEditSheet({
   // needs to run against the final size, not a mid-transition one.
   const subviewInputRef = useRef<HTMLInputElement>(null);
 
-  // `vh()` fractions are computed against this, not a fresh
-  // `window.innerHeight` read, because on Android that value is the
-  // *current* (possibly keyboard-resized) layout viewport, not a stable
-  // screen height — reading it near a focus event risks capturing a
-  // moment already skewed by the keyboard opening. Captured once below,
-  // when the sheet opens at the menu (definitely keyboard-closed), and
-  // reused for every ratchet for the rest of this open/close cycle.
-  const [viewportHeight, setViewportHeight] = useState(0);
-
   // Keeps rendering the same player's content while the sheet animates
   // closed, instead of falling through to the empty case the instant
   // `player` is nulled out (still mounted mid-exit-animation). Adjusted
@@ -196,7 +192,6 @@ export function PlayerEditSheet({
       // measured height (e.g. the taller Merge view) and visibly animates
       // down to the menu's height instead of just opening at it.
       setHeight(undefined);
-      setViewportHeight(window.innerHeight);
     }
   }
   const mode = nav.mode;
@@ -251,7 +246,7 @@ export function PlayerEditSheet({
     setMergeSearch("");
     setMergeTargetId(null);
     setMergeExpanded(false);
-    setHeight(vh(viewportHeight, 0.65));
+    setHeight(SHEET_HEIGHT_MID);
     go("merge", 1);
   }
 
@@ -294,15 +289,15 @@ export function PlayerEditSheet({
         // the keyboard closed. Disabling it entirely removes that race.
         repositionInputs={false}
       >
-        <DrawerContent className="bg-background data-[vaul-drawer-direction=bottom]:mt-2 data-[vaul-drawer-direction=bottom]:max-h-[97vh]">
+        <DrawerContent className="bg-background data-[vaul-drawer-direction=bottom]:mt-2 data-[vaul-drawer-direction=bottom]:max-h-[900px]">
           {/*
-            Merge's 65vh/95vh (and Rename's 65vh, once expanded) targets are
-            otherwise silently capped by the default max-h-[80vh] — the menu
-            never got tall enough to notice. mt + max-h are kept small
-            enough that they can never add up to more than the viewport
-            height, so the sheet can't get pushed off-screen at the top no
-            matter how tall its content asks to be — flexbox just shrinks
-            the inner content to fit instead.
+            Merge/Rename's fixed SHEET_HEIGHT_MID/TALL frames are otherwise
+            silently capped by the default max-h-[80vh] — the menu never
+            got tall enough to notice. A fixed px cap here (not `vh`, same
+            reasoning as SHEET_HEIGHT_MID/TALL above) is comfortably above
+            SHEET_HEIGHT_TALL plus the header, so it only ever kicks in as a
+            safety ceiling on very short screens — flexbox shrinks the
+            inner content to fit instead of overflowing.
           */}
           <DrawerHeader className="shrink-0">
             <DrawerTitle className="text-base">
@@ -348,7 +343,7 @@ export function PlayerEditSheet({
                     // is already settled before the keyboard starts opening.
                     if (!renameExpanded) {
                       setRenameExpanded(true);
-                      setHeight(vh(viewportHeight, 0.65));
+                      setHeight(SHEET_HEIGHT_MID);
                     }
                     subviewInputRef.current?.focus();
                   }
@@ -452,7 +447,7 @@ export function PlayerEditSheet({
                         onFocus={() => {
                           if (!mergeExpanded) {
                             setMergeExpanded(true);
-                            setHeight(vh(viewportHeight, 0.95));
+                            setHeight(SHEET_HEIGHT_TALL);
                           }
                         }}
                         placeholder="Search players"
